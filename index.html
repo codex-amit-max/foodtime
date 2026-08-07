@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>FoodTime — Home-cooked, on the clock</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#A63D2F">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rozha+One&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ivory: #FAF6ED;
+    --ivory-dim: #F1E9D8;
+    --ink: #2B211A;
+    --ink-soft: #6B5D4F;
+    --sindoor: #A63D2F;
+    --sindoor-deep: #7E2E22;
+    --turmeric: #E0A438;
+    --leaf: #4C6444;
+    --leaf-deep: #354833;
+    --line: #E3D8C3;
+    --card: #FFFFFF;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ivory);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 40px;
+  }
+
+  h1, h2, h3, .display {
+    font-family: 'Rozha One', serif;
+    font-weight: 400;
+    letter-spacing: 0.2px;
+  }
+
+  .mono { font-family: 'Space Mono', monospace; }
+
+  header {
+    background: var(--sindoor);
+    color: var(--ivory);
+    padding: 22px 20px 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::after {
+    content: "";
+    position: absolute;
+    right: -30px; top: -30px;
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    background: var(--turmeric);
+    opacity: 0.18;
+  }
+  .brand {
+    font-size: 30px;
+    margin: 0;
+    position: relative;
+  }
+  .tagline {
+    font-size: 13.5px;
+    opacity: 0.85;
+    margin-top: 4px;
+    position: relative;
+  }
+
+  .tabs {
+    display: flex;
+    margin: -36px 16px 20px;
+    position: relative;
+    z-index: 2;
+    background: var(--card);
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(43,33,26,0.15);
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .tab-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 14px 8px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .tab-btn.active {
+    background: var(--sindoor);
+    color: var(--ivory);
+  }
+
+  .view { display: none; padding: 0 16px; }
+  .view.active { display: block; }
+
+  .subtabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .subtab-btn {
+    border: 1.5px solid var(--line);
+    background: var(--card);
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .subtab-btn.active {
+    background: var(--leaf);
+    border-color: var(--leaf);
+    color: var(--ivory);
+  }
+  .subview { display: none; }
+  .subview.active { display: block; }
+
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+    border: 1px solid var(--line);
+    box-shadow: 0 2px 8px rgba(43,33,26,0.05);
+  }
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .seller-name { font-size: 17px; margin: 0 0 2px; }
+  .meal-type {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+  .items { font-size: 14.5px; margin: 10px 0; line-height: 1.5; color: var(--ink); }
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  .dial-wrap { display: flex; align-items: center; gap: 10px; }
+  .dial {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    position: relative;
+    background: conic-gradient(var(--turmeric) calc(var(--pct,50) * 1%), var(--ivory-dim) 0);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .dial::before {
+    content: "";
+    width: 34px; height: 34px;
+    background: var(--card);
+    border-radius: 50%;
+  }
+  .countdown-text { line-height: 1.3; }
+  .countdown-value { font-size: 15px; font-weight: 700; }
+  .countdown-label { font-size: 11px; color: var(--ink-soft); }
+
+  .status-locked { color: var(--ink-soft); }
+  .status-locked .dial { background: var(--ivory-dim); }
+
+  .btn {
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    padding: 13px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  .btn-primary { background: var(--sindoor); color: var(--ivory); }
+  .btn-primary:active { background: var(--sindoor-deep); }
+  .btn-secondary { background: var(--leaf); color: var(--ivory); }
+  .btn-secondary:active { background: var(--leaf-deep); }
+  .btn:disabled { background: var(--line); color: var(--ink-soft); cursor: not-allowed; }
+
+  .order-row { display: flex; gap: 8px; margin-top: 10px; }
+  .order-row input { flex: 1; }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14.5px;
+    background: var(--card);
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--ink-soft);
+  }
+  .empty .display { font-size: 22px; color: var(--ink); margin-bottom: 6px; }
+
+  .toast {
+    position: fixed;
+    bottom: 20px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: var(--ivory);
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    z-index: 100;
+    max-width: 85%;
+    text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+
+  .badge-open {
+    display: inline-block;
+    background: var(--leaf);
+    color: var(--ivory);
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+  .badge-locked {
+    display: inline-block;
+    background: var(--ivory-dim);
+    color: var(--ink-soft);
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="brand">FoodTime</p>
+  <p class="tagline">Home-cooked meals, on the family's clock.</p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="buyer">Find a Meal</button>
+  <button class="tab-btn" data-tab="seller">I'm Cooking</button>
+</div>
+
+<div class="view active" id="view-buyer">
+  <div id="buyer-feed"></div>
+</div>
+
+<div class="view" id="view-seller">
+  <div class="subtabs">
+    <button class="subtab-btn active" data-sub="post">Post a Menu</button>
+    <button class="subtab-btn" data-sub="orders">My Orders</button>
+  </div>
+
+  <div class="subview active" id="sub-post">
+    <label>Your Name</label>
+    <input type="text" id="s-name" placeholder="e.g. Amit's Kitchen">
+
+    <label>Meal Slot</label>
+    <select id="s-mealtype">
+      <option value="breakfast">Breakfast</option>
+      <option value="lunch" selected>Lunch</option>
+      <option value="dinner">Dinner</option>
+    </select>
+
+    <label>Meal Time</label>
+    <input type="datetime-local" id="s-mealtime">
+
+    <label>What's on the menu?</label>
+    <textarea id="s-items" placeholder="e.g. Rajma Chawal, salad, extra roti"></textarea>
+
+    <label>Extra Portions Available</label>
+    <input type="number" id="s-portions" min="1" placeholder="e.g. 4">
+
+    <label>Area / Locality</label>
+    <input type="text" id="s-location" placeholder="e.g. Andheri West, Mumbai">
+
+    <button class="btn btn-primary" id="btn-post">Publish Menu</button>
+  </div>
+
+  <div class="subview" id="sub-orders">
+    <label>Your Name (same as used to post)</label>
+    <input type="text" id="o-name" placeholder="e.g. Amit's Kitchen">
+    <button class="btn btn-secondary" id="btn-refresh-orders">View My Slots</button>
+    <div id="seller-slots" style="margin-top:16px;"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = 'https://foodfoodtime-backend.onrender.com';
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'buyer') loadFeed();
+  });
+});
+
+document.querySelectorAll('.subtab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.subview').forEach(v => v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('sub-' + btn.dataset.sub).classList.add('active');
+  });
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function formatMealTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleString('en-IN', { weekday: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+function countdownParts(cutoffIso) {
+  const ms = new Date(cutoffIso) - new Date();
+  if (ms <= 0) return null;
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return { h, m, ms };
+}
+
+async function loadFeed() {
+  const feed = document.getElementById('buyer-feed');
+  feed.innerHTML = '<p class="empty">Loading nearby meals…</p>';
+  try {
+    const res = await fetch(`${API_BASE}/api/slots`);
+    const slots = await res.json();
+
+    if (!slots.length) {
+      feed.innerHTML = `<div class="empty"><p class="display">No meals posted yet</p><p>Check back soon — families nearby haven't listed today's cooking.</p></div>`;
+      return;
+    }
+
+    feed.innerHTML = '';
+    slots.forEach(slot => feed.appendChild(renderBuyerCard(slot)));
+  } catch (err) {
+    feed.innerHTML = `<div class="empty"><p class="display">Couldn't load meals</p><p>Check your connection and try again.</p></div>`;
+  }
+}
+
+function renderBuyerCard(slot) {
+  const div = document.createElement('div');
+  div.className = 'card';
+  const isOpen = slot.status === 'open';
+  const portionsLeft = slot.maxPortions - slot.ordersCount;
+
+  div.innerHTML = `
+    <div class="card-top">
+      <div>
+        <span class="meal-type">${slot.mealType}</span>
+        <h3 class="seller-name">${escapeHtml(slot.sellerName)}</h3>
+      </div>
+      <span class="${isOpen ? 'badge-open' : 'badge-locked'}">${isOpen ? 'Open' : 'Locked'}</span>
+    </div>
+    <p class="items">${escapeHtml(slot.items)}</p>
+    <div class="meta-row">
+      <span>${slot.location ? escapeHtml(slot.location) + ' · ' : ''}${formatMealTime(slot.mealTime)}</span>
+      <span>${portionsLeft > 0 ? portionsLeft + ' left' : 'Sold out'}</span>
+    </div>
+    <div class="cd-slot ${isOpen ? '' : 'status-locked'}" data-cutoff="${slot.cutoffTime}"></div>
+    ${isOpen && portionsLeft > 0 ? `
+      <div class="order-row">
+        <input type="text" placeholder="Your name" id="buyer-name-${slot._id}">
+        <input type="number" placeholder="Qty" min="1" max="${portionsLeft}" value="1" id="buyer-qty-${slot._id}" style="max-width:70px;">
+      </div>
+      <button class="btn btn-primary" onclick="placeOrder('${slot._id}', ${portionsLeft})">Order Now</button>
+    ` : `<button class="btn" disabled>${portionsLeft <= 0 ? 'Sold Out' : 'Ordering Closed'}</button>`}
+  `;
+
+  updateCountdownEl(div.querySelector('.cd-slot'), slot.cutoffTime, isOpen);
+  return div;
+}
+
+function updateCountdownEl(el, cutoffIso, isOpen) {
+  if (!el) return;
+  const parts = countdownParts(cutoffIso);
+  if (!isOpen || !parts) {
+    el.innerHTML = `<div class="dial-wrap"><div class="dial" style="--pct:0"></div><div class="countdown-text"><div class="countdown-value mono">Closed</div><div class="countdown-label">Ordering window has passed</div></div></div>`;
+    return;
+  }
+  const pct = Math.max(4, Math.min(100, Math.round((parts.ms / (3*60*60*1000)) * 100)));
+  const timeStr = parts.h > 0 ? `${parts.h}h ${parts.m}m` : `${parts.m}m`;
+  el.innerHTML = `<div class="dial-wrap"><div class="dial" style="--pct:${pct}"></div><div class="countdown-text"><div class="countdown-value mono">${timeStr}</div><div class="countdown-label">left to order</div></div></div>`;
+}
+
+setInterval(() => {
+  document.querySelectorAll('.cd-slot').forEach(el => {
+    const cutoff = el.dataset.cutoff;
+    const stillOpen = new Date(cutoff) > new Date();
+    updateCountdownEl(el, cutoff, stillOpen);
+  });
+}, 30000);
+
+setInterval(() => {
+  if (document.getElementById('view-buyer').classList.contains('active')) loadFeed();
+}, 120000);
+
+async function placeOrder(slotId, maxLeft) {
+  const nameEl = document.getElementById(`buyer-name-${slotId}`);
+  const qtyEl = document.getElementById(`buyer-qty-${slotId}`);
+  const buyerName = nameEl.value.trim();
+  const quantity = parseInt(qtyEl.value);
+
+  if (!buyerName) return showToast('Please enter your name');
+  if (!quantity || quantity < 1) return showToast('Please enter a valid quantity');
+  if (quantity > maxLeft) return showToast(`Only ${maxLeft} portions left`);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slotId, buyerName, quantity })
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error || 'Could not place order');
+    showToast('Order placed! The seller has been notified.');
+    loadFeed();
+  } catch (err) {
+    showToast('Network error — please try again');
+  }
+}
+
+document.getElementById('btn-post').addEventListener('click', async () => {
+  const sellerName = document.getElementById('s-name').value.trim();
+  const mealType = document.getElementById('s-mealtype').value;
+  const mealTime = document.getElementById('s-mealtime').value;
+  const items = document.getElementById('s-items').value.trim();
+  const maxPortions = parseInt(document.getElementById('s-portions').value);
+  const location = document.getElementById('s-location').value.trim();
+
+  if (!sellerName || !mealTime || !items || !maxPortions) {
+    return showToast('Please fill in all required fields');
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/slots`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sellerName, mealType, mealTime, items, maxPortions, location })
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error || 'Could not publish menu');
+    showToast('Menu published!');
+    document.getElementById('s-items').value = '';
+    document.getElementById('s-portions').value = '';
+  } catch (err) {
+    showToast('Network error — please try again');
+  }
+});
+
+document.getElementById('btn-refresh-orders').addEventListener('click', async () => {
+  const name = document.getElementById('o-name').value.trim();
+  const container = document.getElementById('seller-slots');
+  if (!name) return showToast('Enter your seller name first');
+
+  container.innerHTML = '<p class="empty">Loading…</p>';
+  try {
+    const res = await fetch(`${API_BASE}/api/slots/seller/${encodeURIComponent(name)}`);
+    const slots = await res.json();
+    if (!slots.length) {
+      container.innerHTML = `<div class="empty"><p class="display">No menus yet</p><p>Post your first menu to see orders here.</p></div>`;
+      return;
+    }
+    container.innerHTML = '';
+    slots.forEach(slot => {
+      const isOpen = new Date(slot.cutoffTime) > new Date();
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = `
+        <div class="card-top">
+          <div>
+            <span class="meal-type">${slot.mealType}</span>
+            <h3 class="seller-name">${formatMealTime(slot.mealTime)}</h3>
+          </div>
+          <span class="${isOpen ? 'badge-open' : 'badge-locked'}">${isOpen ? 'Taking orders' : 'Locked'}</span>
+        </div>
+        <p class="items">${escapeHtml(slot.items)}</p>
+        <div class="meta-row">
+          <span>Cutoff: ${formatMealTime(slot.cutoffTime)}</span>
+          <span class="mono" style="font-weight:700;color:var(--ink);">${slot.ordersCount} / ${slot.maxPortions} ordered</span>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="empty"><p>Couldn't load your menus. Try again.</p></div>`;
+  }
+});
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+(function setDefaultTime() {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 240);
+  const iso = new Date(now.getTime() - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  document.getElementById('s-mealtime').value = iso;
+})();
+
+loadFeed();
+</script>
+
+</body>
+</html>
