@@ -6,12 +6,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ---- Connect to MongoDB ----
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// ---- Database Schemas ----
 const slotSchema = new mongoose.Schema({
   sellerName: String,
   mealType: String,
@@ -20,7 +18,10 @@ const slotSchema = new mongoose.Schema({
   items: String,
   maxPortions: Number,
   ordersCount: { type: Number, default: 0 },
+  pricePerPortion: Number,
   location: String,
+  latitude: Number,
+  longitude: Number,
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -44,14 +45,31 @@ function isSlotOpen(slot) {
   return now < new Date(slot.cutoffTime) && slot.ordersCount < slot.maxPortions;
 }
 
+function getDistanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 app.post('/api/slots', async (req, res) => {
   try {
-    const { sellerName, mealType, mealTime, items, maxPortions, location } = req.body;
-    if (!sellerName || !mealType || !mealTime || !items || !maxPortions) {
+    const { sellerName, mealType, mealTime, items, maxPortions, pricePerPortion, location, latitude, longitude } = req.body;
+    if (!sellerName || !mealType || !mealTime || !items || !maxPortions || !pricePerPortion) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     const cutoffTime = calculateCutoff(mealTime);
-    const newSlot = new Slot({ sellerName, mealType, mealTime, cutoffTime, items, maxPortions, location: location || null });
+    const newSlot = new Slot({
+      sellerName, mealType, mealTime, cutoffTime, items, maxPortions,
+      pricePerPortion,
+      location: location || null,
+      latitude: latitude || null,
+      longitude: longitude || null
+    });
     await newSlot.save();
     res.status(201).json(newSlot);
   } catch (err) {
@@ -61,9 +79,24 @@ app.post('/api/slots', async (req, res) => {
 
 app.get('/api/slots', async (req, res) => {
   try {
-    const slots = await Slot.find().sort({ createdAt: -1 });
-    const slotsWithStatus = slots.map(slot => ({ ...slot.toObject(), status: isSlotOpen(slot) ? 'open' : 'locked' }));
-    res.json(slotsWithStatus);
+    const { lat, lng, radius } = req.query;
+    let slots = await Slot.find().sort({ createdAt: -1 });
+
+    let result = slots.map(slot => {
+      const obj = slot.toObject();
+      obj.status = isSlotOpen(slot) ? 'open' : 'locked';
+      if (lat && lng && slot.latitude != null && slot.longitude != null) {
+        obj.distanceKm = getDistanceKm(parseFloat(lat), parseFloat(lng), slot.latitude, slot.longitude);
+      }
+      return obj;
+    });
+
+    if (lat && lng && radius) {
+      result = result.filter(s => s.distanceKm != null && s.distanceKm <= parseFloat(radius));
+      result.sort((a, b) => a.distanceKm - b.distanceKm);
+    }
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
