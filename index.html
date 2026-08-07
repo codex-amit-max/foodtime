@@ -22,247 +22,71 @@
     --line: #E3D8C3;
     --card: #FFFFFF;
   }
-
   * { box-sizing: border-box; }
-
-  body {
-    margin: 0;
-    background: var(--ivory);
-    color: var(--ink);
-    font-family: 'Inter', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    padding-bottom: 40px;
-  }
-
-  h1, h2, h3, .display {
-    font-family: 'Rozha One', serif;
-    font-weight: 400;
-    letter-spacing: 0.2px;
-  }
-
+  body { margin: 0; background: var(--ivory); color: var(--ink); font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; padding-bottom: 40px; }
+  h1, h2, h3, .display { font-family: 'Rozha One', serif; font-weight: 400; letter-spacing: 0.2px; }
   .mono { font-family: 'Space Mono', monospace; }
-
-  header {
-    background: var(--sindoor);
-    color: var(--ivory);
-    padding: 22px 20px 60px;
-    position: relative;
-    overflow: hidden;
-  }
-  header::after {
-    content: "";
-    position: absolute;
-    right: -30px; top: -30px;
-    width: 140px; height: 140px;
-    border-radius: 50%;
-    background: var(--turmeric);
-    opacity: 0.18;
-  }
-  .brand {
-    font-size: 30px;
-    margin: 0;
-    position: relative;
-  }
-  .tagline {
-    font-size: 13.5px;
-    opacity: 0.85;
-    margin-top: 4px;
-    position: relative;
-  }
-
-  .tabs {
-    display: flex;
-    margin: -36px 16px 20px;
-    position: relative;
-    z-index: 2;
-    background: var(--card);
-    border-radius: 14px;
-    box-shadow: 0 6px 18px rgba(43,33,26,0.15);
-    overflow: hidden;
-    border: 1px solid var(--line);
-  }
-  .tab-btn {
-    flex: 1;
-    border: none;
-    background: transparent;
-    padding: 14px 8px;
-    font-family: 'Inter', sans-serif;
-    font-weight: 600;
-    font-size: 14.5px;
-    color: var(--ink-soft);
-    cursor: pointer;
-    transition: background 0.2s, color 0.2s;
-  }
-  .tab-btn.active {
-    background: var(--sindoor);
-    color: var(--ivory);
-  }
-
+  header { background: var(--sindoor); color: var(--ivory); padding: 22px 20px 60px; position: relative; overflow: hidden; }
+  header::after { content: ""; position: absolute; right: -30px; top: -30px; width: 140px; height: 140px; border-radius: 50%; background: var(--turmeric); opacity: 0.18; }
+  .brand { font-size: 30px; margin: 0; position: relative; }
+  .tagline { font-size: 13.5px; opacity: 0.85; margin-top: 4px; position: relative; }
+  .tabs { display: flex; margin: -36px 16px 20px; position: relative; z-index: 2; background: var(--card); border-radius: 14px; box-shadow: 0 6px 18px rgba(43,33,26,0.15); overflow: hidden; border: 1px solid var(--line); }
+  .tab-btn { flex: 1; border: none; background: transparent; padding: 14px 8px; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14.5px; color: var(--ink-soft); cursor: pointer; transition: background 0.2s, color 0.2s; }
+  .tab-btn.active { background: var(--sindoor); color: var(--ivory); }
   .view { display: none; padding: 0 16px; }
   .view.active { display: block; }
-
   .subtabs { display: flex; gap: 8px; margin-bottom: 16px; }
-  .subtab-btn {
-    border: 1.5px solid var(--line);
-    background: var(--card);
-    padding: 8px 14px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink-soft);
-    cursor: pointer;
-  }
-  .subtab-btn.active {
-    background: var(--leaf);
-    border-color: var(--leaf);
-    color: var(--ivory);
-  }
+  .subtab-btn { border: 1.5px solid var(--line); background: var(--card); padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; color: var(--ink-soft); cursor: pointer; }
+  .subtab-btn.active { background: var(--leaf); border-color: var(--leaf); color: var(--ivory); }
   .subview { display: none; }
   .subview.active { display: block; }
-
-  .card {
-    background: var(--card);
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 14px;
-    border: 1px solid var(--line);
-    box-shadow: 0 2px 8px rgba(43,33,26,0.05);
-  }
-  .card-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 10px;
-  }
+  .location-bar { background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .loc-btn { border: none; background: var(--leaf); color: var(--ivory); font-weight: 700; font-size: 13px; padding: 9px 14px; border-radius: 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+  .loc-btn.located { background: var(--ink-soft); }
+  .radius-select { flex: 1; min-width: 110px; margin-bottom: 0; padding: 9px 10px; font-size: 13.5px; }
+  .loc-status { width: 100%; font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 14px; border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(43,33,26,0.05); }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
   .seller-name { font-size: 17px; margin: 0 0 2px; }
-  .meal-type {
-    font-size: 11.5px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--ink-soft);
-    font-weight: 600;
-  }
+  .meal-type { font-size: 11.5px; text-transform: uppercase; letter-spacing: 1px; color: var(--ink-soft); font-weight: 600; }
   .items { font-size: 14.5px; margin: 10px 0; line-height: 1.5; color: var(--ink); }
-  .meta-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 10px;
-    font-size: 13px;
-    color: var(--ink-soft);
-  }
-
+  .meta-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 13px; color: var(--ink-soft); }
+  .price-tag { font-family: 'Space Mono', monospace; font-weight: 700; color: var(--sindoor); font-size: 15px; }
+  .distance-tag { font-size: 12px; color: var(--leaf-deep); font-weight: 600; }
   .dial-wrap { display: flex; align-items: center; gap: 10px; }
-  .dial {
-    width: 46px; height: 46px;
-    border-radius: 50%;
-    position: relative;
-    background: conic-gradient(var(--turmeric) calc(var(--pct,50) * 1%), var(--ivory-dim) 0);
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .dial::before {
-    content: "";
-    width: 34px; height: 34px;
-    background: var(--card);
-    border-radius: 50%;
-  }
+  .dial { width: 46px; height: 46px; border-radius: 50%; position: relative; background: conic-gradient(var(--turmeric) calc(var(--pct,50) * 1%), var(--ivory-dim) 0); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .dial::before { content: ""; width: 34px; height: 34px; background: var(--card); border-radius: 50%; }
   .countdown-text { line-height: 1.3; }
   .countdown-value { font-size: 15px; font-weight: 700; }
   .countdown-label { font-size: 11px; color: var(--ink-soft); }
-
   .status-locked { color: var(--ink-soft); }
   .status-locked .dial { background: var(--ivory-dim); }
-
-  .btn {
-    width: 100%;
-    border: none;
-    border-radius: 12px;
-    padding: 13px;
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-    font-size: 15px;
-    cursor: pointer;
-    margin-top: 10px;
-  }
+  .btn { width: 100%; border: none; border-radius: 12px; padding: 13px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 10px; }
   .btn-primary { background: var(--sindoor); color: var(--ivory); }
   .btn-primary:active { background: var(--sindoor-deep); }
   .btn-secondary { background: var(--leaf); color: var(--ivory); }
   .btn-secondary:active { background: var(--leaf-deep); }
+  .btn-outline { background: var(--card); color: var(--leaf); border: 1.5px solid var(--leaf); }
   .btn:disabled { background: var(--line); color: var(--ink-soft); cursor: not-allowed; }
-
   .order-row { display: flex; gap: 8px; margin-top: 10px; }
   .order-row input { flex: 1; }
-
-  input, select, textarea {
-    width: 100%;
-    padding: 11px 12px;
-    border: 1.5px solid var(--line);
-    border-radius: 10px;
-    font-family: 'Inter', sans-serif;
-    font-size: 14.5px;
-    background: var(--card);
-    color: var(--ink);
-    margin-bottom: 12px;
-  }
+  .order-total { font-size: 12.5px; color: var(--ink-soft); margin-top: 6px; }
+  .order-total span { color: var(--sindoor); font-weight: 700; }
+  input, select, textarea { width: 100%; padding: 11px 12px; border: 1.5px solid var(--line); border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 14.5px; background: var(--card); color: var(--ink); margin-bottom: 12px; }
   textarea { min-height: 70px; resize: vertical; }
-  label {
-    display: block;
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--ink-soft);
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .empty {
-    text-align: center;
-    padding: 50px 20px;
-    color: var(--ink-soft);
-  }
+  label { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .price-input-wrap { position: relative; }
+  .price-input-wrap::before { content: "₹"; position: absolute; left: 12px; top: 11px; color: var(--ink-soft); font-weight: 600; }
+  .price-input-wrap input { padding-left: 26px; }
+  .location-share { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .location-share .loc-btn { margin-bottom: 0; }
+  .location-share-status { font-size: 12.5px; color: var(--leaf-deep); font-weight: 600; }
+  .empty { text-align: center; padding: 50px 20px; color: var(--ink-soft); }
   .empty .display { font-size: 22px; color: var(--ink); margin-bottom: 6px; }
-
-  .toast {
-    position: fixed;
-    bottom: 20px; left: 50%;
-    transform: translateX(-50%);
-    background: var(--ink);
-    color: var(--ivory);
-    padding: 12px 20px;
-    border-radius: 10px;
-    font-size: 14px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s, transform 0.25s;
-    z-index: 100;
-    max-width: 85%;
-    text-align: center;
-  }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--ivory); padding: 12px 20px; border-radius: 10px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; z-index: 100; max-width: 85%; text-align: center; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
-
-  .badge-open {
-    display: inline-block;
-    background: var(--leaf);
-    color: var(--ivory);
-    font-size: 10.5px;
-    font-weight: 700;
-    text-transform: uppercase;
-    padding: 3px 8px;
-    border-radius: 20px;
-    letter-spacing: 0.5px;
-  }
-  .badge-locked {
-    display: inline-block;
-    background: var(--ivory-dim);
-    color: var(--ink-soft);
-    font-size: 10.5px;
-    font-weight: 700;
-    text-transform: uppercase;
-    padding: 3px 8px;
-    border-radius: 20px;
-    letter-spacing: 0.5px;
-  }
+  .badge-open { display: inline-block; background: var(--leaf); color: var(--ivory); font-size: 10.5px; font-weight: 700; text-transform: uppercase; padding: 3px 8px; border-radius: 20px; letter-spacing: 0.5px; }
+  .badge-locked { display: inline-block; background: var(--ivory-dim); color: var(--ink-soft); font-size: 10.5px; font-weight: 700; text-transform: uppercase; padding: 3px 8px; border-radius: 20px; letter-spacing: 0.5px; }
 </style>
 </head>
 <body>
@@ -278,6 +102,17 @@
 </div>
 
 <div class="view active" id="view-buyer">
+  <div class="location-bar">
+    <button class="loc-btn" id="btn-locate">📍 Use My Location</button>
+    <select class="radius-select" id="radius-select">
+      <option value="1">Within 1 km</option>
+      <option value="3" selected>Within 3 km</option>
+      <option value="5">Within 5 km</option>
+      <option value="10">Within 10 km</option>
+      <option value="20">Within 20 km</option>
+    </select>
+    <div class="loc-status" id="loc-status">Showing all meals — turn on location to filter by distance</div>
+  </div>
   <div id="buyer-feed"></div>
 </div>
 
@@ -304,11 +139,22 @@
     <label>What's on the menu?</label>
     <textarea id="s-items" placeholder="e.g. Rajma Chawal, salad, extra roti"></textarea>
 
+    <label>Price per Portion</label>
+    <div class="price-input-wrap">
+      <input type="number" id="s-price" min="1" placeholder="e.g. 80">
+    </div>
+
     <label>Extra Portions Available</label>
     <input type="number" id="s-portions" min="1" placeholder="e.g. 4">
 
     <label>Area / Locality</label>
     <input type="text" id="s-location" placeholder="e.g. Andheri West, Mumbai">
+
+    <label>Pin Your Exact Location</label>
+    <div class="location-share">
+      <button class="loc-btn" id="btn-share-location" type="button">📍 Share My Location</button>
+      <span class="location-share-status" id="share-loc-status"></span>
+    </div>
 
     <button class="btn btn-primary" id="btn-post">Publish Menu</button>
   </div>
@@ -322,9 +168,12 @@
 </div>
 
 <div class="toast" id="toast"></div>
-
 <script>
 const API_BASE = 'https://foodfoodtime-backend.onrender.com';
+let buyerLat = null;
+let buyerLng = null;
+let sellerLat = null;
+let sellerLng = null;
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -366,15 +215,50 @@ function countdownParts(cutoffIso) {
   return { h, m, ms };
 }
 
+document.getElementById('btn-locate').addEventListener('click', () => {
+  const statusEl = document.getElementById('loc-status');
+  const btn = document.getElementById('btn-locate');
+  if (!navigator.geolocation) {
+    statusEl.textContent = "Your browser doesn't support location.";
+    return;
+  }
+  statusEl.textContent = 'Getting your location…';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      buyerLat = pos.coords.latitude;
+      buyerLng = pos.coords.longitude;
+      btn.textContent = '📍 Located';
+      btn.classList.add('located');
+      statusEl.textContent = 'Showing meals near you, nearest first.';
+      loadFeed();
+    },
+    (err) => {
+      statusEl.textContent = 'Could not get your location. Check permissions and try again.';
+    }
+  );
+});
+
+document.getElementById('radius-select').addEventListener('change', () => {
+  if (buyerLat && buyerLng) loadFeed();
+});
+
 async function loadFeed() {
   const feed = document.getElementById('buyer-feed');
   feed.innerHTML = '<p class="empty">Loading nearby meals…</p>';
   try {
-    const res = await fetch(`${API_BASE}/api/slots`);
+    let url = `${API_BASE}/api/slots`;
+    if (buyerLat && buyerLng) {
+      const radius = document.getElementById('radius-select').value;
+      url += `?lat=${buyerLat}&lng=${buyerLng}&radius=${radius}`;
+    }
+    const res = await fetch(url);
     const slots = await res.json();
 
     if (!slots.length) {
-      feed.innerHTML = `<div class="empty"><p class="display">No meals posted yet</p><p>Check back soon — families nearby haven't listed today's cooking.</p></div>`;
+      const msg = buyerLat
+        ? "No meals within this radius yet. Try a wider distance."
+        : "Check back soon — families nearby haven't listed today's cooking.";
+      feed.innerHTML = `<div class="empty"><p class="display">No meals found</p><p>${msg}</p></div>`;
       return;
     }
 
@@ -390,6 +274,7 @@ function renderBuyerCard(slot) {
   div.className = 'card';
   const isOpen = slot.status === 'open';
   const portionsLeft = slot.maxPortions - slot.ordersCount;
+  const price = slot.pricePerPortion || 0;
 
   div.innerHTML = `
     <div class="card-top">
@@ -401,21 +286,33 @@ function renderBuyerCard(slot) {
     </div>
     <p class="items">${escapeHtml(slot.items)}</p>
     <div class="meta-row">
-      <span>${slot.location ? escapeHtml(slot.location) + ' · ' : ''}${formatMealTime(slot.mealTime)}</span>
+      <span class="price-tag">₹${price} / portion</span>
       <span>${portionsLeft > 0 ? portionsLeft + ' left' : 'Sold out'}</span>
+    </div>
+    <div class="meta-row">
+      <span>${slot.location ? escapeHtml(slot.location) + ' · ' : ''}${formatMealTime(slot.mealTime)}</span>
+      ${slot.distanceKm != null ? `<span class="distance-tag">${slot.distanceKm.toFixed(1)} km away</span>` : ''}
     </div>
     <div class="cd-slot ${isOpen ? '' : 'status-locked'}" data-cutoff="${slot.cutoffTime}"></div>
     ${isOpen && portionsLeft > 0 ? `
       <div class="order-row">
         <input type="text" placeholder="Your name" id="buyer-name-${slot._id}">
-        <input type="number" placeholder="Qty" min="1" max="${portionsLeft}" value="1" id="buyer-qty-${slot._id}" style="max-width:70px;">
+        <input type="number" placeholder="Qty" min="1" max="${portionsLeft}" value="1" id="buyer-qty-${slot._id}" style="max-width:70px;" oninput="updateOrderTotal('${slot._id}', ${price})">
       </div>
+      <div class="order-total" id="order-total-${slot._id}">Total: <span>₹${price}</span></div>
       <button class="btn btn-primary" onclick="placeOrder('${slot._id}', ${portionsLeft})">Order Now</button>
     ` : `<button class="btn" disabled>${portionsLeft <= 0 ? 'Sold Out' : 'Ordering Closed'}</button>`}
   `;
 
   updateCountdownEl(div.querySelector('.cd-slot'), slot.cutoffTime, isOpen);
   return div;
+}
+
+function updateOrderTotal(slotId, price) {
+  const qtyEl = document.getElementById(`buyer-qty-${slotId}`);
+  const totalEl = document.getElementById(`order-total-${slotId}`);
+  const qty = parseInt(qtyEl.value) || 0;
+  totalEl.innerHTML = `Total: <span>₹${qty * price}</span>`;
 }
 
 function updateCountdownEl(el, cutoffIso, isOpen) {
@@ -467,29 +364,56 @@ async function placeOrder(slotId, maxLeft) {
   }
 }
 
+document.getElementById('btn-share-location').addEventListener('click', () => {
+  const statusEl = document.getElementById('share-loc-status');
+  const btn = document.getElementById('btn-share-location');
+  if (!navigator.geolocation) {
+    statusEl.textContent = "Location not supported on this browser.";
+    return;
+  }
+  statusEl.textContent = 'Getting location…';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      sellerLat = pos.coords.latitude;
+      sellerLng = pos.coords.longitude;
+      btn.textContent = '📍 Located';
+      btn.classList.add('located');
+      statusEl.textContent = 'Location pinned ✓';
+    },
+    (err) => {
+      statusEl.textContent = 'Could not get location. Check permissions.';
+    }
+  );
+});
+
 document.getElementById('btn-post').addEventListener('click', async () => {
   const sellerName = document.getElementById('s-name').value.trim();
   const mealType = document.getElementById('s-mealtype').value;
   const mealTime = document.getElementById('s-mealtime').value;
   const items = document.getElementById('s-items').value.trim();
+  const pricePerPortion = parseInt(document.getElementById('s-price').value);
   const maxPortions = parseInt(document.getElementById('s-portions').value);
   const location = document.getElementById('s-location').value.trim();
 
-  if (!sellerName || !mealTime || !items || !maxPortions) {
-    return showToast('Please fill in all required fields');
+  if (!sellerName || !mealTime || !items || !maxPortions || !pricePerPortion) {
+    return showToast('Please fill in all required fields, including price');
   }
 
   try {
     const res = await fetch(`${API_BASE}/api/slots`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sellerName, mealType, mealTime, items, maxPortions, location })
+      body: JSON.stringify({
+        sellerName, mealType, mealTime, items, maxPortions, pricePerPortion, location,
+        latitude: sellerLat, longitude: sellerLng
+      })
     });
     const data = await res.json();
     if (!res.ok) return showToast(data.error || 'Could not publish menu');
     showToast('Menu published!');
     document.getElementById('s-items').value = '';
     document.getElementById('s-portions').value = '';
+    document.getElementById('s-price').value = '';
   } catch (err) {
     showToast('Network error — please try again');
   }
@@ -513,6 +437,7 @@ document.getElementById('btn-refresh-orders').addEventListener('click', async ()
       const isOpen = new Date(slot.cutoffTime) > new Date();
       const div = document.createElement('div');
       div.className = 'card';
+      const revenue = (slot.pricePerPortion || 0) * slot.ordersCount;
       div.innerHTML = `
         <div class="card-top">
           <div>
@@ -523,8 +448,12 @@ document.getElementById('btn-refresh-orders').addEventListener('click', async ()
         </div>
         <p class="items">${escapeHtml(slot.items)}</p>
         <div class="meta-row">
+          <span class="price-tag">₹${slot.pricePerPortion || 0} / portion</span>
           <span>Cutoff: ${formatMealTime(slot.cutoffTime)}</span>
+        </div>
+        <div class="meta-row">
           <span class="mono" style="font-weight:700;color:var(--ink);">${slot.ordersCount} / ${slot.maxPortions} ordered</span>
+          <span class="price-tag">₹${revenue} so far</span>
         </div>
       `;
       container.appendChild(div);
