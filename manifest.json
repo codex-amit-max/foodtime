@@ -1,0 +1,10 @@
+{
+  "name": "FoodTime",
+  "short_name": "FoodTime",
+  "description": "Home-cooked meals, on the family's clock.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FAF6ED",
+  "theme_color": "#A63D2F",
+  "icons": []
+}
