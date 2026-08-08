@@ -7,118 +7,37 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-/* =========================================================
-   DATABASE
-========================================================= */
-
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-
 /* =========================================================
-   SLOT / MENU SCHEMA
-========================================================= */
+   MODELS
+   ========================================================= */
 
 const slotSchema = new mongoose.Schema({
-  sellerName: {
-    type: String,
-    required: true,
-    trim: true
-  },
+  sellerName: { type: String, required: true },
+  mealType: { type: String, required: true },
+  mealTime: { type: Date, required: true },
+  cutoffTime: { type: Date, required: true },
 
-  mealType: {
-    type: String,
-    required: true,
-    enum: ['breakfast', 'lunch', 'dinner']
-  },
+  items: { type: String, required: true },
 
-  mealTime: {
-    type: Date,
-    required: true
-  },
+  maxPortions: { type: Number, required: true },
+  ordersCount: { type: Number, default: 0 },
 
-  cutoffTime: {
-    type: Date,
-    required: true
-  },
+  pricePerPortion: { type: Number, required: true },
 
-  items: {
-    type: String,
-    required: true,
-    trim: true
-  },
+  location: String,
+  latitude: Number,
+  longitude: Number,
 
-  maxPortions: {
-    type: Number,
-    required: true,
-    min: 1
-  },
+  upiId: String,
+  sellerPhone: String,
+  sellerEmail: String,
 
-  /*
-   * This represents portions reserved by all active orders.
-   *
-   * Pending orders reserve portions.
-   * Accepted orders reserve portions.
-   * Rejected/cancelled orders release portions.
-   */
-  ordersCount: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-
-  pricePerPortion: {
-    type: Number,
-    required: true,
-    min: 1
-  },
-
-  location: {
-    type: String,
-    default: null
-  },
-
-  latitude: {
-    type: Number,
-    default: null
-  },
-
-  longitude: {
-    type: Number,
-    default: null
-  },
-
-  upiId: {
-    type: String,
-    default: null
-  },
-
-  sellerPhone: {
-    type: String,
-    default: null
-  },
-
-  sellerEmail: {
-    type: String,
-    default: null
-  },
-
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
+  createdAt: { type: Date, default: Date.now }
 });
-
-
-/* =========================================================
-   ORDER SCHEMA
-========================================================= */
 
 const orderSchema = new mongoose.Schema({
   slotId: {
@@ -126,21 +45,9 @@ const orderSchema = new mongoose.Schema({
     required: true
   },
 
-  buyerName: {
-    type: String,
-    required: true,
-    trim: true
-  },
-
-  buyerPhone: {
-    type: String,
-    default: null
-  },
-
-  buyerEmail: {
-    type: String,
-    default: null
-  },
+  buyerName: { type: String, required: true },
+  buyerPhone: String,
+  buyerEmail: String,
 
   quantity: {
     type: Number,
@@ -148,13 +55,6 @@ const orderSchema = new mongoose.Schema({
     min: 1
   },
 
-  /*
-   * pending
-   * accepted
-   * rejected
-   * cancelled_by_buyer
-   * cancelled_by_seller
-   */
   status: {
     type: String,
     enum: [
@@ -167,39 +67,23 @@ const orderSchema = new mongoose.Schema({
     default: 'pending'
   },
 
-  cancelReason: {
-    type: String,
-    default: null
-  },
+  cancelReason: String,
 
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
+  createdAt: { type: Date, default: Date.now }
 });
-
 
 const Slot = mongoose.model('Slot', slotSchema);
 const Order = mongoose.model('Order', orderSchema);
 
 
 /* =========================================================
-   HELPER FUNCTIONS
-========================================================= */
+   HELPERS
+   ========================================================= */
 
 function calculateCutoff(mealDateTime) {
   const mealTime = new Date(mealDateTime);
-
-  return new Date(
-    mealTime.getTime() - (3 * 60 * 60 * 1000)
-  );
+  return new Date(mealTime.getTime() - (3 * 60 * 60 * 1000));
 }
-
 
 function isSlotOpen(slot) {
   const now = new Date();
@@ -209,7 +93,6 @@ function isSlotOpen(slot) {
     slot.ordersCount < slot.maxPortions
   );
 }
-
 
 function getDistanceKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -223,37 +106,49 @@ function getDistanceKm(lat1, lon1, lat2, lon2) {
     Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLon / 2) ** 2;
 
-  const c =
-    2 * Math.atan2(
-      Math.sqrt(a),
-      Math.sqrt(1 - a)
-    );
+  const c = 2 * Math.atan2(
+    Math.sqrt(a),
+    Math.sqrt(1 - a)
+  );
 
   return R * c;
 }
 
+function isValidQuantity(value) {
+  const number = Number(value);
 
-function hasAcceptedOrders(slotId) {
-  return Order.exists({
-    slotId,
-    status: 'accepted'
-  });
+  return Number.isInteger(number) && number > 0;
 }
 
 
-function hasActiveOrders(slotId) {
-  return Order.exists({
+/*
+  This is important for the controlled meal-editing rule.
+
+  TRUE means at least one order for this meal has already
+  been accepted by the seller.
+*/
+async function slotHasAcceptedOrder(slotId) {
+  const accepted = await Order.exists({
     slotId,
-    status: {
-      $in: ['pending', 'accepted']
-    }
+    status: 'accepted'
   });
+
+  return !!accepted;
 }
 
 
 /* =========================================================
+   HEALTH CHECK
+   ========================================================= */
+
+app.get('/', (req, res) => {
+  res.send('FoodTime backend is running!');
+});
+
+
+/* =========================================================
    CREATE MENU
-========================================================= */
+   ========================================================= */
 
 app.post('/api/slots', async (req, res) => {
   try {
@@ -285,42 +180,27 @@ app.post('/api/slots', async (req, res) => {
       });
     }
 
-    const parsedMealTime = new Date(mealTime);
-
-    if (isNaN(parsedMealTime.getTime())) {
+    if (!isValidQuantity(maxPortions)) {
       return res.status(400).json({
-        error: 'Invalid meal time'
+        error: 'Invalid number of portions'
       });
     }
 
-    if (parsedMealTime <= new Date()) {
-      return res.status(400).json({
-        error: 'Meal time must be in the future'
-      });
-    }
-
-    const parsedMaxPortions = Number(maxPortions);
-    const parsedPrice = Number(pricePerPortion);
-
-    if (
-      !Number.isInteger(parsedMaxPortions) ||
-      parsedMaxPortions < 1
-    ) {
-      return res.status(400).json({
-        error: 'Maximum portions must be at least 1'
-      });
-    }
-
-    if (
-      !Number.isFinite(parsedPrice) ||
-      parsedPrice <= 0
-    ) {
+    if (Number(pricePerPortion) <= 0) {
       return res.status(400).json({
         error: 'Price must be greater than zero'
       });
     }
 
-    const cutoffTime = calculateCutoff(parsedMealTime);
+    const mealDate = new Date(mealTime);
+
+    if (isNaN(mealDate.getTime())) {
+      return res.status(400).json({
+        error: 'Invalid meal time'
+      });
+    }
+
+    const cutoffTime = calculateCutoff(mealDate);
 
     if (cutoffTime <= new Date()) {
       return res.status(400).json({
@@ -331,26 +211,21 @@ app.post('/api/slots', async (req, res) => {
     const newSlot = new Slot({
       sellerName: sellerName.trim(),
       mealType,
-      mealTime: parsedMealTime,
+      mealTime: mealDate,
       cutoffTime,
       items: items.trim(),
-      maxPortions: parsedMaxPortions,
-      ordersCount: 0,
-      pricePerPortion: parsedPrice,
+      maxPortions: Number(maxPortions),
+      pricePerPortion: Number(pricePerPortion),
 
       location: location ? location.trim() : null,
 
       latitude:
-        latitude !== undefined &&
-        latitude !== null &&
-        latitude !== ''
+        latitude !== undefined && latitude !== null
           ? Number(latitude)
           : null,
 
       longitude:
-        longitude !== undefined &&
-        longitude !== null &&
-        longitude !== ''
+        longitude !== undefined && longitude !== null
           ? Number(longitude)
           : null,
 
@@ -364,7 +239,7 @@ app.post('/api/slots', async (req, res) => {
     res.status(201).json(newSlot);
 
   } catch (err) {
-    console.error('Create slot error:', err);
+    console.error(err);
 
     res.status(500).json({
       error: err.message
@@ -375,19 +250,14 @@ app.post('/api/slots', async (req, res) => {
 
 /* =========================================================
    GET ALL MENUS
-========================================================= */
+   ========================================================= */
 
 app.get('/api/slots', async (req, res) => {
   try {
-    const {
-      lat,
-      lng,
-      radius
-    } = req.query;
+    const { lat, lng, radius } = req.query;
 
-    let slots = await Slot
-      .find()
-      .sort({ createdAt: -1 });
+    const slots = await Slot.find()
+      .sort({ mealTime: 1, createdAt: -1 });
 
     let result = slots.map(slot => {
 
@@ -397,16 +267,13 @@ app.get('/api/slots', async (req, res) => {
         ? 'open'
         : 'locked';
 
-      obj.portionsLeft = Math.max(
-        0,
-        slot.maxPortions - slot.ordersCount
-      );
-
       if (
         lat &&
         lng &&
-        slot.latitude != null &&
-        slot.longitude != null
+        slot.latitude !== null &&
+        slot.latitude !== undefined &&
+        slot.longitude !== null &&
+        slot.longitude !== undefined
       ) {
         obj.distanceKm = getDistanceKm(
           parseFloat(lat),
@@ -421,22 +288,21 @@ app.get('/api/slots', async (req, res) => {
 
     if (lat && lng && radius) {
 
-      result = result.filter(
-        s =>
-          s.distanceKm != null &&
-          s.distanceKm <= parseFloat(radius)
+      result = result.filter(slot =>
+        slot.distanceKm !== undefined &&
+        slot.distanceKm <= parseFloat(radius)
       );
 
       result.sort(
-        (a, b) =>
-          a.distanceKm - b.distanceKm
+        (a, b) => a.distanceKm - b.distanceKm
       );
     }
 
     res.json(result);
 
   } catch (err) {
-    console.error('Get slots error:', err);
+
+    console.error(err);
 
     res.status(500).json({
       error: err.message
@@ -447,23 +313,22 @@ app.get('/api/slots', async (req, res) => {
 
 /* =========================================================
    GET SELLER MENUS
-========================================================= */
+   ========================================================= */
 
 app.get('/api/slots/seller/:sellerName', async (req, res) => {
   try {
 
-    const sellerSlots = await Slot
-      .find({
-        sellerName: req.params.sellerName
-      })
-      .sort({
-        createdAt: -1
-      });
+    const sellerSlots = await Slot.find({
+      sellerName: req.params.sellerName
+    }).sort({
+      mealTime: 1,
+      createdAt: -1
+    });
 
     const result = await Promise.all(
       sellerSlots.map(async slot => {
 
-        const acceptedOrders = await Order.countDocuments({
+        const acceptedOrder = await Order.exists({
           slotId: slot._id,
           status: 'accepted'
         });
@@ -473,28 +338,29 @@ app.get('/api/slots/seller/:sellerName', async (req, res) => {
           status: 'pending'
         });
 
+        const rejectedOrders = await Order.countDocuments({
+          slotId: slot._id,
+          status: 'rejected'
+        });
+
         return {
           ...slot.toObject(),
 
-          acceptedOrders,
-          pendingOrders,
+          hasAcceptedOrder: !!acceptedOrder,
 
-          /*
-           * Menu can be fully edited only if
-           * there are no accepted orders.
-           */
-          canFullyEdit:
-            acceptedOrders === 0 &&
-            new Date(slot.cutoffTime) > new Date(),
+          hasPendingOrders: pendingOrders > 0,
 
-          /*
-           * After acceptance, only:
-           * - increase max portions
-           * - move meal time later
-           */
-          canLimitedEdit:
-            acceptedOrders > 0 &&
-            new Date(slot.cutoffTime) > new Date()
+          pendingOrdersCount: pendingOrders,
+
+          rejectedOrdersCount: rejectedOrders,
+
+          canFullyEdit: !acceptedOrder,
+
+          canIncreaseOnly: !!acceptedOrder,
+
+          status: isSlotOpen(slot)
+            ? 'open'
+            : 'locked'
         };
       })
     );
@@ -502,7 +368,8 @@ app.get('/api/slots/seller/:sellerName', async (req, res) => {
     res.json(result);
 
   } catch (err) {
-    console.error('Get seller slots error:', err);
+
+    console.error(err);
 
     res.status(500).json({
       error: err.message
@@ -513,33 +380,27 @@ app.get('/api/slots/seller/:sellerName', async (req, res) => {
 
 /* =========================================================
    EDIT MENU
-=========================================================
+   =========================================================
 
-   RULES:
+   BEFORE ANY ORDER IS ACCEPTED:
+      Seller can change:
+      - meal type
+      - meal time
+      - menu items
+      - price
+      - quantity
+      - location
+      - UPI
+      - phone
+      - email
 
-   BEFORE ANY ACCEPTED ORDER:
-      seller can change:
-        mealType
-        mealTime
-        items
-        maxPortions
-        price
-        location
-        UPI
-        phone
-        email
+   AFTER AN ORDER IS ACCEPTED:
+      Seller can ONLY:
+      - increase maxPortions
+      - increase mealTime
 
-   AFTER AN ACCEPTED ORDER:
-      seller can ONLY:
-        increase maxPortions
-        increase mealTime
-
-   NEVER:
-        reduce maxPortions below already reserved quantity
-        move mealTime earlier
-        change price after acceptance
-        change food/items after acceptance
-========================================================= */
+   Everything else is rejected by the server.
+   ========================================================= */
 
 app.patch('/api/slots/:id', async (req, res) => {
   try {
@@ -552,16 +413,10 @@ app.patch('/api/slots/:id', async (req, res) => {
       });
     }
 
-    const now = new Date();
-
-    if (now >= new Date(slot.cutoffTime)) {
-      return res.status(400).json({
-        error: 'This menu can no longer be edited because the ordering window has closed'
-      });
-    }
+    const acceptedOrderExists =
+      await slotHasAcceptedOrder(slot._id);
 
     const {
-      sellerName,
       mealType,
       mealTime,
       items,
@@ -576,81 +431,50 @@ app.patch('/api/slots/:id', async (req, res) => {
     } = req.body;
 
 
-    /*
-     * For the current prototype we use sellerName
-     * as the seller identity.
-     */
-    if (
-      sellerName &&
-      sellerName.trim() !== slot.sellerName.trim()
-    ) {
-      return res.status(403).json({
-        error: 'Seller identity does not match this menu'
-      });
-    }
+    /* -----------------------------------------------------
+       AFTER ACCEPTANCE
+       ----------------------------------------------------- */
 
+    if (acceptedOrderExists) {
 
-    const acceptedOrders = await Order.countDocuments({
-      slotId: slot._id,
-      status: 'accepted'
-    });
+      const allowedFields = [
+        'mealTime',
+        'maxPortions'
+      ];
 
+      const suppliedFields =
+        Object.keys(req.body).filter(
+          key => req.body[key] !== undefined
+        );
 
-    /* =====================================================
-       CASE 1: NO ACCEPTED ORDERS
-       FULL EDITING ALLOWED
-    ===================================================== */
+      const invalidField = suppliedFields.find(
+        key => !allowedFields.includes(key)
+      );
 
-    if (acceptedOrders === 0) {
-
-      const newMealTime =
-        mealTime !== undefined
-          ? new Date(mealTime)
-          : slot.mealTime;
-
-      if (isNaN(newMealTime.getTime())) {
+      if (invalidField) {
         return res.status(400).json({
-          error: 'Invalid meal time'
+          error:
+            'This meal already has an accepted order. You can only increase available portions or extend the meal time.'
         });
       }
 
-      if (newMealTime <= now) {
-        return res.status(400).json({
-          error: 'Meal time must be in the future'
-        });
-      }
 
-      const newCutoff =
-        calculateCutoff(newMealTime);
-
-      if (newCutoff <= now) {
-        return res.status(400).json({
-          error: 'Meal time must be at least 3 hours in the future'
-        });
-      }
-
+      /* Increase portions only */
 
       if (maxPortions !== undefined) {
 
         const newMax = Number(maxPortions);
 
-        if (
-          !Number.isInteger(newMax) ||
-          newMax < 1
-        ) {
+        if (!isValidQuantity(newMax)) {
           return res.status(400).json({
-            error: 'Invalid maximum portions'
+            error: 'Invalid portion quantity'
           });
         }
 
-        /*
-         * Never allow menu capacity below
-         * currently reserved portions.
-         */
-        if (newMax < slot.ordersCount) {
+        if (newMax < slot.maxPortions) {
           return res.status(400).json({
             error:
-              `Maximum portions cannot be below ${slot.ordersCount}, which are already reserved`
+              'After an order is accepted, available portions can only be increased.'
           });
         }
 
@@ -658,118 +482,52 @@ app.patch('/api/slots/:id', async (req, res) => {
       }
 
 
-      if (mealType !== undefined) {
+      /* Extend meal time only */
 
-        if (
-          !['breakfast', 'lunch', 'dinner']
-            .includes(mealType)
-        ) {
+      if (mealTime !== undefined) {
+
+        const newMealTime = new Date(mealTime);
+
+        if (isNaN(newMealTime.getTime())) {
           return res.status(400).json({
-            error: 'Invalid meal type'
+            error: 'Invalid meal time'
           });
         }
 
-        slot.mealType = mealType;
-      }
-
-
-      if (items !== undefined) {
-
-        if (!items.trim()) {
+        if (newMealTime <= slot.mealTime) {
           return res.status(400).json({
-            error: 'Menu description cannot be empty'
+            error:
+              'After an order is accepted, meal time can only be extended.'
           });
         }
 
-        slot.items = items.trim();
+        slot.mealTime = newMealTime;
+        slot.cutoffTime = calculateCutoff(newMealTime);
       }
 
-
-      if (pricePerPortion !== undefined) {
-
-        const newPrice =
-          Number(pricePerPortion);
-
-        if (
-          !Number.isFinite(newPrice) ||
-          newPrice <= 0
-        ) {
-          return res.status(400).json({
-            error: 'Invalid price'
-          });
-        }
-
-        slot.pricePerPortion = newPrice;
-      }
-
-
-      slot.mealTime = newMealTime;
-      slot.cutoffTime = newCutoff;
-
-
-      if (location !== undefined) {
-        slot.location =
-          location ? location.trim() : null;
-      }
-
-      if (latitude !== undefined) {
-        slot.latitude =
-          latitude === null ||
-          latitude === ''
-            ? null
-            : Number(latitude);
-      }
-
-      if (longitude !== undefined) {
-        slot.longitude =
-          longitude === null ||
-          longitude === ''
-            ? null
-            : Number(longitude);
-      }
-
-      if (upiId !== undefined) {
-        slot.upiId =
-          upiId ? upiId.trim() : null;
-      }
-
-      if (sellerPhone !== undefined) {
-        slot.sellerPhone =
-          sellerPhone ? sellerPhone.trim() : null;
-      }
-
-      if (sellerEmail !== undefined) {
-        slot.sellerEmail =
-          sellerEmail ? sellerEmail.trim() : null;
-      }
-
-
-      slot.updatedAt = new Date();
 
       await slot.save();
 
       return res.json({
         success: true,
-        mode: 'full_edit',
-        message: 'Menu updated successfully',
+        message:
+          'Menu updated. Only increased portions/time are allowed after acceptance.',
         slot
       });
     }
 
 
-    /* =====================================================
-       CASE 2: ACCEPTED ORDERS EXIST
-       LIMITED EDITING ONLY
-    ===================================================== */
+    /* -----------------------------------------------------
+       BEFORE ACCEPTANCE
+       ----------------------------------------------------- */
 
-    const currentMealTime =
-      new Date(slot.mealTime);
-
-    let newMealTime = currentMealTime;
+    if (mealType !== undefined) {
+      slot.mealType = mealType;
+    }
 
     if (mealTime !== undefined) {
 
-      newMealTime = new Date(mealTime);
+      const newMealTime = new Date(mealTime);
 
       if (isNaN(newMealTime.getTime())) {
         return res.status(400).json({
@@ -777,86 +535,108 @@ app.patch('/api/slots/:id', async (req, res) => {
         });
       }
 
-      /*
-       * Meal time can ONLY move later.
-       */
-      if (newMealTime < currentMealTime) {
+      if (newMealTime <= new Date()) {
         return res.status(400).json({
-          error:
-            'Once an order is accepted, meal time can only be increased/later'
+          error: 'Meal time must be in the future'
         });
       }
+
+      slot.mealTime = newMealTime;
+      slot.cutoffTime = calculateCutoff(newMealTime);
     }
 
+    if (items !== undefined) {
+      if (!String(items).trim()) {
+        return res.status(400).json({
+          error: 'Menu items cannot be empty'
+        });
+      }
 
-    if (
-      mealType !== undefined ||
-      items !== undefined ||
-      pricePerPortion !== undefined ||
-      location !== undefined ||
-      latitude !== undefined ||
-      longitude !== undefined ||
-      upiId !== undefined ||
-      sellerPhone !== undefined ||
-      sellerEmail !== undefined
-    ) {
-      return res.status(400).json({
-        error:
-          'Once an order is accepted, only quantity and availability time can be increased'
-      });
+      slot.items = String(items).trim();
     }
 
+    if (pricePerPortion !== undefined) {
+
+      const price = Number(pricePerPortion);
+
+      if (price <= 0) {
+        return res.status(400).json({
+          error: 'Price must be greater than zero'
+        });
+      }
+
+      slot.pricePerPortion = price;
+    }
 
     if (maxPortions !== undefined) {
 
-      const newMax =
-        Number(maxPortions);
+      const portions = Number(maxPortions);
 
-      if (
-        !Number.isInteger(newMax) ||
-        newMax < slot.maxPortions
-      ) {
+      if (!isValidQuantity(portions)) {
         return res.status(400).json({
-          error:
-            'Once an order is accepted, available quantity can only be increased'
+          error: 'Invalid number of portions'
         });
       }
 
-      slot.maxPortions = newMax;
+      if (portions < slot.ordersCount) {
+        return res.status(400).json({
+          error:
+            `You cannot set portions below the ${slot.ordersCount} portions already ordered.`
+        });
+      }
+
+      slot.maxPortions = portions;
     }
 
-
-    /*
-     * Recalculate cutoff whenever meal time
-     * changes.
-     */
-    const newCutoff =
-      calculateCutoff(newMealTime);
-
-    if (newCutoff <= now) {
-      return res.status(400).json({
-        error:
-          'The new meal time must leave at least 3 hours for ordering'
-      });
+    if (location !== undefined) {
+      slot.location = location
+        ? String(location).trim()
+        : null;
     }
 
-    slot.mealTime = newMealTime;
-    slot.cutoffTime = newCutoff;
-    slot.updatedAt = new Date();
+    if (latitude !== undefined) {
+      slot.latitude =
+        latitude === null || latitude === ''
+          ? null
+          : Number(latitude);
+    }
+
+    if (longitude !== undefined) {
+      slot.longitude =
+        longitude === null || longitude === ''
+          ? null
+          : Number(longitude);
+    }
+
+    if (upiId !== undefined) {
+      slot.upiId = upiId
+        ? String(upiId).trim()
+        : null;
+    }
+
+    if (sellerPhone !== undefined) {
+      slot.sellerPhone = sellerPhone
+        ? String(sellerPhone).trim()
+        : null;
+    }
+
+    if (sellerEmail !== undefined) {
+      slot.sellerEmail = sellerEmail
+        ? String(sellerEmail).trim()
+        : null;
+    }
 
     await slot.save();
 
-    return res.json({
+    res.json({
       success: true,
-      mode: 'limited_edit',
-      message:
-        'Menu updated. Only quantity and availability time can be changed after acceptance.',
+      message: 'Menu updated successfully.',
       slot
     });
 
   } catch (err) {
 
-    console.error('Edit slot error:', err);
+    console.error(err);
 
     res.status(500).json({
       error: err.message
@@ -866,19 +646,17 @@ app.patch('/api/slots/:id', async (req, res) => {
 
 
 /* =========================================================
-   GET ORDERS FOR A SLOT
-========================================================= */
+   ORDERS FOR A MENU
+   ========================================================= */
 
 app.get('/api/slots/:id/orders', async (req, res) => {
   try {
 
-    const orders = await Order
-      .find({
-        slotId: req.params.id
-      })
-      .sort({
-        createdAt: -1
-      });
+    const orders = await Order.find({
+      slotId: req.params.id
+    }).sort({
+      createdAt: -1
+    });
 
     res.json(orders);
 
@@ -893,7 +671,7 @@ app.get('/api/slots/:id/orders', async (req, res) => {
 
 /* =========================================================
    PLACE ORDER
-========================================================= */
+   ========================================================= */
 
 app.post('/api/orders', async (req, res) => {
   try {
@@ -906,137 +684,68 @@ app.post('/api/orders', async (req, res) => {
       quantity
     } = req.body;
 
-
-    if (!slotId || !buyerName || !quantity) {
+    if (!slotId || !buyerName) {
       return res.status(400).json({
-        error: 'Missing required order information'
+        error: 'Buyer name and menu are required'
       });
     }
 
-
-    const parsedQuantity =
-      Number(quantity);
-
-    if (
-      !Number.isInteger(parsedQuantity) ||
-      parsedQuantity < 1
-    ) {
+    if (!isValidQuantity(quantity)) {
       return res.status(400).json({
         error: 'Invalid quantity'
       });
     }
 
-
-    /*
-     * Atomic update prevents two buyers from
-     * simultaneously taking the last portion.
-     */
-    const cutoffNow = new Date();
-
-    const slot = await Slot.findOneAndUpdate(
-      {
-        _id: slotId,
-        cutoffTime: { $gt: cutoffNow },
-
-        $expr: {
-          $lte: [
-            {
-              $add: [
-                '$ordersCount',
-                parsedQuantity
-              ]
-            },
-            '$maxPortions'
-          ]
-        }
-      },
-      {
-        $inc: {
-          ordersCount: parsedQuantity
-        },
-
-        $set: {
-          updatedAt: new Date()
-        }
-      },
-      {
-        new: true
-      }
-    );
-
+    const slot = await Slot.findById(slotId);
 
     if (!slot) {
-
-      const existingSlot =
-        await Slot.findById(slotId);
-
-      if (!existingSlot) {
-        return res.status(404).json({
-          error: 'Slot not found'
-        });
-      }
-
-      if (
-        new Date(existingSlot.cutoffTime) <= new Date()
-      ) {
-        return res.status(400).json({
-          error: 'Ordering is closed for this slot'
-        });
-      }
-
-      return res.status(400).json({
-        error: 'Not enough portions left'
+      return res.status(404).json({
+        error: 'Menu not found'
       });
     }
 
+    if (!isSlotOpen(slot)) {
+      return res.status(400).json({
+        error: 'Ordering is closed for this menu'
+      });
+    }
+
+    const qty = Number(quantity);
+
+    if (
+      slot.ordersCount + qty >
+      slot.maxPortions
+    ) {
+      return res.status(400).json({
+        error:
+          `Only ${slot.maxPortions - slot.ordersCount} portions are available`
+      });
+    }
 
     const newOrder = new Order({
       slotId,
       buyerName: buyerName.trim(),
-
-      buyerPhone:
-        buyerPhone
-          ? buyerPhone.trim()
-          : null,
-
-      buyerEmail:
-        buyerEmail
-          ? buyerEmail.trim()
-          : null,
-
-      quantity: parsedQuantity,
+      buyerPhone: buyerPhone
+        ? buyerPhone.trim()
+        : null,
+      buyerEmail: buyerEmail
+        ? buyerEmail.trim()
+        : null,
+      quantity: qty,
       status: 'pending'
     });
 
+    await newOrder.save();
 
-    try {
+    slot.ordersCount += qty;
 
-      await newOrder.save();
-
-    } catch (orderError) {
-
-      /*
-       * If order creation fails after the slot was
-       * reserved, release the reserved quantity.
-       */
-      await Slot.findByIdAndUpdate(
-        slotId,
-        {
-          $inc: {
-            ordersCount: -parsedQuantity
-          }
-        }
-      );
-
-      throw orderError;
-    }
-
+    await slot.save();
 
     res.status(201).json(newOrder);
 
   } catch (err) {
 
-    console.error('Place order error:', err);
+    console.error(err);
 
     res.status(500).json({
       error: err.message
@@ -1047,88 +756,66 @@ app.post('/api/orders', async (req, res) => {
 
 /* =========================================================
    BUYER ORDERS
-========================================================= */
+   ========================================================= */
 
 app.get('/api/orders/buyer/:buyerName', async (req, res) => {
   try {
 
-    const orders = await Order
-      .find({
-        buyerName: req.params.buyerName
+    const orders = await Order.find({
+      buyerName: req.params.buyerName
+    }).sort({
+      createdAt: -1
+    });
+
+    const result = await Promise.all(
+      orders.map(async order => {
+
+        const slot =
+          await Slot.findById(order.slotId);
+
+        return {
+          _id: order._id,
+
+          buyerName: order.buyerName,
+
+          buyerPhone: order.buyerPhone,
+
+          buyerEmail: order.buyerEmail,
+
+          quantity: order.quantity,
+
+          status: order.status,
+
+          cancelReason: order.cancelReason,
+
+          createdAt: order.createdAt,
+
+          slot: slot
+            ? {
+                _id: slot._id,
+                sellerName: slot.sellerName,
+                mealType: slot.mealType,
+                mealTime: slot.mealTime,
+                cutoffTime: slot.cutoffTime,
+                items: slot.items,
+                pricePerPortion:
+                  slot.pricePerPortion,
+                upiId: slot.upiId,
+                sellerPhone:
+                  slot.sellerPhone,
+
+                canCancel:
+                  new Date(slot.cutoffTime) >
+                  new Date()
+              }
+            : null
+        };
       })
-      .sort({
-        createdAt: -1
-      });
+    );
 
-
-    const withSlots =
-      await Promise.all(
-
-        orders.map(async order => {
-
-          const slot =
-            await Slot.findById(order.slotId);
-
-          return {
-
-            _id: order._id,
-
-            quantity:
-              order.quantity,
-
-            status:
-              order.status,
-
-            cancelReason:
-              order.cancelReason,
-
-            createdAt:
-              order.createdAt,
-
-            slot: slot
-              ? {
-                  _id: slot._id,
-
-                  sellerName:
-                    slot.sellerName,
-
-                  mealType:
-                    slot.mealType,
-
-                  mealTime:
-                    slot.mealTime,
-
-                  cutoffTime:
-                    slot.cutoffTime,
-
-                  items:
-                    slot.items,
-
-                  pricePerPortion:
-                    slot.pricePerPortion,
-
-                  upiId:
-                    slot.upiId,
-
-                  sellerPhone:
-                    slot.sellerPhone,
-
-                  canCancel:
-                    new Date(slot.cutoffTime) >
-                    new Date()
-                }
-
-              : null
-          };
-        })
-      );
-
-
-    res.json(withSlots);
+    res.json(result);
 
   } catch (err) {
-
-    console.error('Buyer orders error:', err);
 
     res.status(500).json({
       error: err.message
@@ -1138,107 +825,78 @@ app.get('/api/orders/buyer/:buyerName', async (req, res) => {
 
 
 /* =========================================================
-   SELLER ORDER QUEUE
-========================================================= */
+   SELLER ORDERS
+   ========================================================= */
 
 app.get('/api/orders/seller/:sellerName', async (req, res) => {
   try {
 
-    const slots =
-      await Slot.find({
-        sellerName: req.params.sellerName
-      });
-
+    const slots = await Slot.find({
+      sellerName: req.params.sellerName
+    });
 
     const slotIds =
-      slots.map(s => s._id);
+      slots.map(slot => slot._id);
 
-
-    const orders =
-      await Order
-        .find({
-          slotId: {
-            $in: slotIds
-          }
-        })
-        .sort({
-          createdAt: -1
-        });
-
+    const orders = await Order.find({
+      slotId: { $in: slotIds }
+    }).sort({
+      createdAt: -1
+    });
 
     const slotMap = {};
 
-    slots.forEach(s => {
-      slotMap[s._id.toString()] = s;
+    slots.forEach(slot => {
+      slotMap[slot._id.toString()] =
+        slot;
     });
 
+    const result = orders.map(order => {
 
-    const result =
-      orders.map(o => {
+      const slot =
+        slotMap[order.slotId.toString()];
 
-        const s =
-          slotMap[o.slotId.toString()];
+      return {
+        _id: order._id,
 
+        buyerName:
+          order.buyerName,
 
-        return {
+        buyerPhone:
+          order.buyerPhone,
 
-          _id:
-            o._id,
+        buyerEmail:
+          order.buyerEmail,
 
-          buyerName:
-            o.buyerName,
+        quantity:
+          order.quantity,
 
-          buyerPhone:
-            o.buyerPhone,
+        status:
+          order.status,
 
-          buyerEmail:
-            o.buyerEmail,
+        cancelReason:
+          order.cancelReason,
 
-          quantity:
-            o.quantity,
+        createdAt:
+          order.createdAt,
 
-          status:
-            o.status,
-
-          cancelReason:
-            o.cancelReason,
-
-          createdAt:
-            o.createdAt,
-
-          slot: s
-            ? {
-
-                _id:
-                  s._id,
-
-                mealType:
-                  s.mealType,
-
-                mealTime:
-                  s.mealTime,
-
-                cutoffTime:
-                  s.cutoffTime,
-
-                items:
-                  s.items,
-
-                pricePerPortion:
-                  s.pricePerPortion
-
-              }
-
-            : null
-        };
-      });
-
+        slot: slot
+          ? {
+              _id: slot._id,
+              mealType: slot.mealType,
+              mealTime: slot.mealTime,
+              cutoffTime: slot.cutoffTime,
+              items: slot.items,
+              pricePerPortion:
+                slot.pricePerPortion
+            }
+          : null
+      };
+    });
 
     res.json(result);
 
   } catch (err) {
-
-    console.error('Seller orders error:', err);
 
     res.status(500).json({
       error: err.message
@@ -1249,7 +907,7 @@ app.get('/api/orders/seller/:sellerName', async (req, res) => {
 
 /* =========================================================
    ACCEPT ORDER
-========================================================= */
+   ========================================================= */
 
 app.patch('/api/orders/:id/accept', async (req, res) => {
   try {
@@ -1263,14 +921,12 @@ app.patch('/api/orders/:id/accept', async (req, res) => {
       });
     }
 
-
     if (order.status !== 'pending') {
       return res.status(400).json({
         error:
-          `This order cannot be accepted because it is already ${order.status}`
+          `This order is already ${order.status}.`
       });
     }
-
 
     const slot =
       await Slot.findById(order.slotId);
@@ -1281,85 +937,55 @@ app.patch('/api/orders/:id/accept', async (req, res) => {
       });
     }
 
-
-    if (
-      new Date(slot.cutoffTime) <= new Date()
-    ) {
+    if (new Date(slot.cutoffTime) <= new Date()) {
       return res.status(400).json({
         error:
-          'This order can no longer be accepted because the ordering window has closed'
+          'The ordering window has already closed.'
       });
     }
-
-
-    if (
-      slot.ordersCount > slot.maxPortions
-    ) {
-      return res.status(400).json({
-        error:
-          'This menu no longer has enough capacity'
-      });
-    }
-
 
     order.status = 'accepted';
-    order.updatedAt = new Date();
 
     await order.save();
 
-
     res.json({
       success: true,
-      message: 'Order accepted',
+      message: 'Order accepted.',
       order
     });
 
   } catch (err) {
 
-    console.error('Accept order error:', err);
+    console.error(err);
 
     res.status(500).json({
       error: err.message
-    });
+   });
   }
 });
 
 
 /* =========================================================
    REJECT ORDER
-=========================================================
+   =========================================================
 
-   IMPORTANT:
-   Rejection is different from seller cancellation.
-
-   Pending -> Rejected
-   requires a reason.
-
-   The reserved quantity is released.
-========================================================= */
+   Mandatory rejection reason.
+   ========================================================= */
 
 app.patch('/api/orders/:id/reject', async (req, res) => {
   try {
 
-    const {
-      reason
-    } = req.body;
+    const { reason } = req.body;
 
-
-    if (
-      !reason ||
-      !reason.trim()
-    ) {
+    if (!reason || !reason.trim()) {
       return res.status(400).json({
         error:
-          'A rejection reason is required'
+          'A rejection reason is required.'
       });
     }
 
-
     const order =
       await Order.findById(req.params.id);
-
 
     if (!order) {
       return res.status(404).json({
@@ -1367,84 +993,67 @@ app.patch('/api/orders/:id/reject', async (req, res) => {
       });
     }
 
-
     if (order.status !== 'pending') {
       return res.status(400).json({
         error:
-          'Only pending orders can be rejected'
+          `This order is already ${order.status}.`
       });
     }
 
-
     const slot =
       await Slot.findById(order.slotId);
-
 
     if (slot) {
 
       slot.ordersCount =
         Math.max(
           0,
-          slot.ordersCount -
-          order.quantity
+          slot.ordersCount - order.quantity
         );
-
-      slot.updatedAt = new Date();
 
       await slot.save();
     }
 
-
     order.status = 'rejected';
-    order.cancelReason = reason.trim();
-    order.updatedAt = new Date();
+
+    order.cancelReason =
+      reason.trim();
 
     await order.save();
 
-
     res.json({
       success: true,
-      message: 'Order rejected',
+      message: 'Order rejected.',
       order
     });
 
   } catch (err) {
 
-    console.error('Reject order error:', err);
+    console.error(err);
 
     res.status(500).json({
       error: err.message
     });
   }
 });
-
-
 /* =========================================================
    SELLER CANCEL ORDER
-========================================================= */
+   ========================================================= */
 
 app.patch('/api/orders/:id/seller-cancel', async (req, res) => {
   try {
 
-    const {
-      reason
-    } = req.body;
+    const { reason } = req.body;
 
-
-    if (
-      !reason ||
-      !reason.trim()
-    ) {
+    if (!reason || !reason.trim()) {
       return res.status(400).json({
         error:
-          'A reason is required to cancel this order'
+          'A reason is required to cancel this order.'
       });
     }
 
-
     const order =
       await Order.findById(req.params.id);
-
 
     if (!order) {
       return res.status(404).json({
@@ -1452,39 +1061,32 @@ app.patch('/api/orders/:id/seller-cancel', async (req, res) => {
       });
     }
 
-
     if (
-      ![
-        'pending',
-        'accepted'
+      [
+        'rejected',
+        'cancelled_by_buyer',
+        'cancelled_by_seller'
       ].includes(order.status)
     ) {
       return res.status(400).json({
         error:
-          'This order can no longer be cancelled'
+          'This order is already cancelled.'
       });
     }
 
-
     const slot =
       await Slot.findById(order.slotId);
-
 
     if (slot) {
 
       slot.ordersCount =
         Math.max(
           0,
-          slot.ordersCount -
-          order.quantity
+          slot.ordersCount - order.quantity
         );
-
-      slot.updatedAt =
-        new Date();
 
       await slot.save();
     }
-
 
     order.status =
       'cancelled_by_seller';
@@ -1492,25 +1094,17 @@ app.patch('/api/orders/:id/seller-cancel', async (req, res) => {
     order.cancelReason =
       reason.trim();
 
-    order.updatedAt =
-      new Date();
-
     await order.save();
-
 
     res.json({
       success: true,
-      message:
-        'Order cancelled by seller',
+      message: 'Order cancelled.',
       order
     });
 
   } catch (err) {
 
-    console.error(
-      'Seller cancel error:',
-      err
-    );
+    console.error(err);
 
     res.status(500).json({
       error: err.message
@@ -1520,44 +1114,28 @@ app.patch('/api/orders/:id/seller-cancel', async (req, res) => {
 
 
 /* =========================================================
-   UPDATE ORDER QUANTITY
-=========================================================
+   EDIT ORDER QUANTITY
+   =========================================================
 
-   Seller may ONLY increase quantity.
+   Kept for compatibility with your existing application.
 
-   This endpoint is intentionally restricted to:
-       pending
-       accepted
-
-   It cannot reduce quantity.
-========================================================= */
+   Seller can change the order quantity while the order
+   is pending or accepted, provided there is capacity.
+   ========================================================= */
 
 app.patch('/api/orders/:id', async (req, res) => {
   try {
 
-    const {
-      quantity
-    } = req.body;
+    const { quantity } = req.body;
 
-
-    if (
-      !Number.isInteger(Number(quantity)) ||
-      Number(quantity) < 1
-    ) {
+    if (!isValidQuantity(quantity)) {
       return res.status(400).json({
-        error:
-          'Invalid quantity'
+        error: 'Invalid quantity'
       });
     }
 
-
-    const newQuantity =
-      Number(quantity);
-
-
     const order =
       await Order.findById(req.params.id);
-
 
     if (!order) {
       return res.status(404).json({
@@ -1565,50 +1143,21 @@ app.patch('/api/orders/:id', async (req, res) => {
       });
     }
 
-
     if (
-      ![
-        'pending',
-        'accepted'
+      [
+        'rejected',
+        'cancelled_by_buyer',
+        'cancelled_by_seller'
       ].includes(order.status)
     ) {
       return res.status(400).json({
         error:
-          'This order can no longer be edited'
+          'Cannot edit a cancelled order.'
       });
     }
-
-
-    /*
-     * Quantity can NEVER be reduced.
-     */
-    if (
-      newQuantity <
-      order.quantity
-    ) {
-      return res.status(400).json({
-        error:
-          'Order quantity can only be increased'
-      });
-    }
-
-
-    if (
-      newQuantity ===
-      order.quantity
-    ) {
-      return res.json(order);
-    }
-
-
-    const increaseBy =
-      newQuantity -
-      order.quantity;
-
 
     const slot =
       await Slot.findById(order.slotId);
-
 
     if (!slot) {
       return res.status(404).json({
@@ -1616,88 +1165,47 @@ app.patch('/api/orders/:id', async (req, res) => {
       });
     }
 
+    const newQuantity =
+      Number(quantity);
+
+    const difference =
+      newQuantity - order.quantity;
 
     if (
-      new Date(slot.cutoffTime) <=
-      new Date()
+      slot.ordersCount + difference >
+      slot.maxPortions
     ) {
       return res.status(400).json({
         error:
-          'The ordering window has closed'
+          'Not enough portions available for this change.'
       });
     }
 
-
-    /*
-     * Atomic capacity check.
-     */
-    const updatedSlot =
-      await Slot.findOneAndUpdate(
-
-        {
-          _id: slot._id,
-
-          $expr: {
-            $lte: [
-              {
-                $add: [
-                  '$ordersCount',
-                  increaseBy
-                ]
-              },
-              '$maxPortions'
-            ]
-          }
-        },
-
-        {
-          $inc: {
-            ordersCount:
-              increaseBy
-          },
-
-          $set: {
-            updatedAt:
-              new Date()
-          }
-        },
-
-        {
-          new: true
-        }
-      );
-
-
-    if (!updatedSlot) {
+    if (
+      slot.ordersCount + difference < 0
+    ) {
       return res.status(400).json({
-        error:
-          'Not enough portions available for this increase'
+        error: 'Invalid quantity change.'
       });
     }
 
+    slot.ordersCount += difference;
+
+    await slot.save();
 
     order.quantity =
       newQuantity;
 
-    order.updatedAt =
-      new Date();
-
     await order.save();
-
 
     res.json({
       success: true,
-      message:
-        'Order quantity increased',
       order
     });
 
   } catch (err) {
 
-    console.error(
-      'Update order error:',
-      err
-    );
+    console.error(err);
 
     res.status(500).json({
       error: err.message
@@ -1705,10 +1213,9 @@ app.patch('/api/orders/:id', async (req, res) => {
   }
 });
 
-
 /* =========================================================
    BUYER CANCEL ORDER
-========================================================= */
+   ========================================================= */
 
 app.delete('/api/orders/:id', async (req, res) => {
   try {
@@ -1716,30 +1223,27 @@ app.delete('/api/orders/:id', async (req, res) => {
     const order =
       await Order.findById(req.params.id);
 
-
     if (!order) {
       return res.status(404).json({
         error: 'Order not found'
       });
     }
 
-
     if (
-      ![
-        'pending',
-        'accepted'
+      [
+        'rejected',
+        'cancelled_by_buyer',
+        'cancelled_by_seller'
       ].includes(order.status)
     ) {
       return res.status(400).json({
         error:
-          'This order cannot be cancelled'
+          'This order is already cancelled.'
       });
     }
 
-
     const slot =
       await Slot.findById(order.slotId);
-
 
     if (!slot) {
       return res.status(404).json({
@@ -1747,17 +1251,15 @@ app.delete('/api/orders/:id', async (req, res) => {
       });
     }
 
-
     if (
       new Date(slot.cutoffTime) <=
       new Date()
     ) {
       return res.status(400).json({
         error:
-          'Cannot cancel — ordering window has closed'
+          'Cannot cancel — ordering window has closed.'
       });
     }
-
 
     const minutesSinceOrder =
       (
@@ -1765,77 +1267,40 @@ app.delete('/api/orders/:id', async (req, res) => {
         new Date(order.createdAt)
       ) / 60000;
 
+    let refundPolicy = 'full';
 
-    let refundPolicy =
-      'full';
-
-
-    if (
-      minutesSinceOrder > 30
-    ) {
+    if (minutesSinceOrder > 30) {
       refundPolicy = 'none';
-
-    } else if (
-      minutesSinceOrder > 10
-    ) {
+    } else if (minutesSinceOrder > 10) {
       refundPolicy = 'half';
     }
 
-
-    /*
-     * Release reserved capacity.
-     */
     slot.ordersCount =
       Math.max(
         0,
-        slot.ordersCount -
-        order.quantity
+        slot.ordersCount - order.quantity
       );
-
-    slot.updatedAt =
-      new Date();
 
     await slot.save();
 
-
-    /*
-     * Preserve the order rather than deleting it.
-     *
-     * This becomes important later when we add
-     * ratings, order history and seller/buyer
-     * reputation.
-     */
     order.status =
       'cancelled_by_buyer';
 
     order.cancelReason =
-      `Buyer cancellation — refund policy: ${refundPolicy}`;
-
-    order.updatedAt =
-      new Date();
+      'Cancelled by buyer';
 
     await order.save();
 
-
     res.json({
       success: true,
-
       refundPolicy,
-
       minutesSinceOrder:
-        Math.round(
-          minutesSinceOrder
-        ),
-
-      order
+        Math.round(minutesSinceOrder)
     });
 
   } catch (err) {
 
-    console.error(
-      'Buyer cancellation error:',
-      err
-    );
+    console.error(err);
 
     res.status(500).json({
       error: err.message
@@ -1845,8 +1310,8 @@ app.delete('/api/orders/:id', async (req, res) => {
 
 
 /* =========================================================
-   SLOT COUNTDOWN
-========================================================= */
+   COUNTDOWN
+   ========================================================= */
 
 app.get('/api/slots/:id/countdown', async (req, res) => {
   try {
@@ -1854,23 +1319,18 @@ app.get('/api/slots/:id/countdown', async (req, res) => {
     const slot =
       await Slot.findById(req.params.id);
 
-
     if (!slot) {
       return res.status(404).json({
-        error: 'Slot not found'
+        error: 'Menu not found'
       });
     }
-
 
     const msRemaining =
       new Date(slot.cutoffTime) -
       new Date();
 
-
     res.json({
-
-      slotId:
-        slot._id,
+      slotId: slot._id,
 
       isOpen:
         msRemaining > 0 &&
@@ -1881,16 +1341,8 @@ app.get('/api/slots/:id/countdown', async (req, res) => {
         Math.max(
           0,
           Math.floor(
-            msRemaining /
-            60000
+            msRemaining / 60000
           )
-        ),
-
-      portionsLeft:
-        Math.max(
-          0,
-          slot.maxPortions -
-          slot.ordersCount
         )
     });
 
@@ -1904,28 +1356,14 @@ app.get('/api/slots/:id/countdown', async (req, res) => {
 
 
 /* =========================================================
-   HEALTH CHECK
-========================================================= */
-
-app.get('/', (req, res) => {
-  res.send(
-    'FoodTime backend is running!'
-  );
-});
-
-
-/* =========================================================
-   SERVER
-========================================================= */
+   START SERVER
+   ========================================================= */
 
 const PORT =
   process.env.PORT || 3000;
 
-app.listen(
-  PORT,
-  () => {
-    console.log(
-      `FoodTime server running on port ${PORT}`
-    );
-  }
-);
+app.listen(PORT, () => {
+  console.log(
+    `FoodTime server running on port ${PORT}`
+  );
+});
