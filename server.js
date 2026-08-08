@@ -22,12 +22,15 @@ const slotSchema = new mongoose.Schema({
   location: String,
   latitude: Number,
   longitude: Number,
+  upiId: String,
+  sellerPhone: String,
   createdAt: { type: Date, default: Date.now }
 });
 
 const orderSchema = new mongoose.Schema({
   slotId: mongoose.Schema.Types.ObjectId,
   buyerName: String,
+  buyerPhone: String,
   quantity: Number,
   createdAt: { type: Date, default: Date.now }
 });
@@ -58,7 +61,10 @@ function getDistanceKm(lat1, lon1, lat2, lon2) {
 
 app.post('/api/slots', async (req, res) => {
   try {
-    const { sellerName, mealType, mealTime, items, maxPortions, pricePerPortion, location, latitude, longitude } = req.body;
+    const {
+      sellerName, mealType, mealTime, items, maxPortions, pricePerPortion,
+      location, latitude, longitude, upiId, sellerPhone
+    } = req.body;
     if (!sellerName || !mealType || !mealTime || !items || !maxPortions || !pricePerPortion) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -68,7 +74,9 @@ app.post('/api/slots', async (req, res) => {
       pricePerPortion,
       location: location || null,
       latitude: latitude || null,
-      longitude: longitude || null
+      longitude: longitude || null,
+      upiId: upiId || null,
+      sellerPhone: sellerPhone || null
     });
     await newSlot.save();
     res.status(201).json(newSlot);
@@ -111,35 +119,4 @@ app.get('/api/slots/seller/:sellerName', async (req, res) => {
   }
 });
 
-app.post('/api/orders', async (req, res) => {
-  try {
-    const { slotId, buyerName, quantity } = req.body;
-    const slot = await Slot.findById(slotId);
-    if (!slot) return res.status(404).json({ error: 'Slot not found' });
-    if (!isSlotOpen(slot)) return res.status(400).json({ error: 'Ordering is closed for this slot' });
-    if (slot.ordersCount + quantity > slot.maxPortions) return res.status(400).json({ error: 'Not enough portions left' });
-    const newOrder = new Order({ slotId, buyerName, quantity });
-    await newOrder.save();
-    slot.ordersCount += quantity;
-    await slot.save();
-    res.status(201).json(newOrder);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/slots/:id/countdown', async (req, res) => {
-  try {
-    const slot = await Slot.findById(req.params.id);
-    if (!slot) return res.status(404).json({ error: 'Slot not found' });
-    const msRemaining = new Date(slot.cutoffTime) - new Date();
-    res.json({ slotId: slot._id, isOpen: msRemaining > 0, minutesRemaining: Math.max(0, Math.floor(msRemaining / 60000)) });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/', (req, res) => res.send('FoodTime backend is running!'));
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`FoodTime server running on port ${PORT}`));
+app.get('/api/slots/:id/orders', async (req, re
