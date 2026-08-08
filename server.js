@@ -24,6 +24,7 @@ const slotSchema = new mongoose.Schema({
   longitude: Number,
   upiId: String,
   sellerPhone: String,
+  sellerEmail: String,
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -31,6 +32,7 @@ const orderSchema = new mongoose.Schema({
   slotId: mongoose.Schema.Types.ObjectId,
   buyerName: String,
   buyerPhone: String,
+  buyerEmail: String,
   quantity: Number,
   createdAt: { type: Date, default: Date.now }
 });
@@ -59,11 +61,12 @@ function getDistanceKm(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
+// ---- SELLER: Post a new meal slot ----
 app.post('/api/slots', async (req, res) => {
   try {
     const {
       sellerName, mealType, mealTime, items, maxPortions, pricePerPortion,
-      location, latitude, longitude, upiId, sellerPhone
+      location, latitude, longitude, upiId, sellerPhone, sellerEmail
     } = req.body;
     if (!sellerName || !mealType || !mealTime || !items || !maxPortions || !pricePerPortion) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -76,7 +79,8 @@ app.post('/api/slots', async (req, res) => {
       latitude: latitude || null,
       longitude: longitude || null,
       upiId: upiId || null,
-      sellerPhone: sellerPhone || null
+      sellerPhone: sellerPhone || null,
+      sellerEmail: sellerEmail || null
     });
     await newSlot.save();
     res.status(201).json(newSlot);
@@ -85,6 +89,7 @@ app.post('/api/slots', async (req, res) => {
   }
 });
 
+// ---- BUYER: Get feed, optionally filtered by distance ----
 app.get('/api/slots', async (req, res) => {
   try {
     const { lat, lng, radius } = req.query;
@@ -110,6 +115,7 @@ app.get('/api/slots', async (req, res) => {
   }
 });
 
+// ---- SELLER: Get their own slots ----
 app.get('/api/slots/seller/:sellerName', async (req, res) => {
   try {
     const sellerSlots = await Slot.find({ sellerName: req.params.sellerName }).sort({ createdAt: -1 });
@@ -118,6 +124,8 @@ app.get('/api/slots/seller/:sellerName', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ---- SELLER: See individual orders for one of their slots ----
 app.get('/api/slots/:id/orders', async (req, res) => {
   try {
     const orders = await Order.find({ slotId: req.params.id }).sort({ createdAt: -1 });
@@ -127,14 +135,15 @@ app.get('/api/slots/:id/orders', async (req, res) => {
   }
 });
 
+// ---- BUYER: Place an order ----
 app.post('/api/orders', async (req, res) => {
   try {
-    const { slotId, buyerName, buyerPhone, quantity } = req.body;
+    const { slotId, buyerName, buyerPhone, buyerEmail, quantity } = req.body;
     const slot = await Slot.findById(slotId);
     if (!slot) return res.status(404).json({ error: 'Slot not found' });
     if (!isSlotOpen(slot)) return res.status(400).json({ error: 'Ordering is closed for this slot' });
     if (slot.ordersCount + quantity > slot.maxPortions) return res.status(400).json({ error: 'Not enough portions left' });
-    const newOrder = new Order({ slotId, buyerName, buyerPhone: buyerPhone || null, quantity });
+    const newOrder = new Order({ slotId, buyerName, buyerPhone: buyerPhone || null, buyerEmail: buyerEmail || null, quantity });
     await newOrder.save();
     slot.ordersCount += quantity;
     await slot.save();
@@ -144,6 +153,7 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
+// ---- BUYER: Get their own order history (with slot info attached) ----
 app.get('/api/orders/buyer/:buyerName', async (req, res) => {
   try {
     const orders = await Order.find({ buyerName: req.params.buyerName }).sort({ createdAt: -1 });
@@ -173,6 +183,7 @@ app.get('/api/orders/buyer/:buyerName', async (req, res) => {
   }
 });
 
+// ---- BUYER: Cancel an order (only before cutoff) ----
 app.delete('/api/orders/:id', async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
@@ -187,8 +198,13 @@ app.delete('/api/orders/:id', async (req, res) => {
       await slot.save();
     }
 
+    const minutesSinceOrder = (new Date() - new Date(order.createdAt)) / 60000;
+    let refundPolicy = 'full';
+    if (minutesSinceOrder > 30) refundPolicy = 'none';
+    else if (minutesSinceOrder > 10) refundPolicy = 'half';
+
     await Order.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
+    res.json({ success: true, refundPolicy, minutesSinceOrder: Math.round(minutesSinceOrder) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -209,3 +225,4 @@ app.get('/', (req, res) => res.send('FoodTime backend is running!'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`FoodTime server running on port ${PORT}`));
+        
