@@ -118,5 +118,94 @@ app.get('/api/slots/seller/:sellerName', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+app.get('/api/slots/:id/orders', async (req, res) => {
+  try {
+    const orders = await Order.find({ slotId: req.params.id }).sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-app.get('/api/slots/:id/orders', async (req, re
+app.post('/api/orders', async (req, res) => {
+  try {
+    const { slotId, buyerName, buyerPhone, quantity } = req.body;
+    const slot = await Slot.findById(slotId);
+    if (!slot) return res.status(404).json({ error: 'Slot not found' });
+    if (!isSlotOpen(slot)) return res.status(400).json({ error: 'Ordering is closed for this slot' });
+    if (slot.ordersCount + quantity > slot.maxPortions) return res.status(400).json({ error: 'Not enough portions left' });
+    const newOrder = new Order({ slotId, buyerName, buyerPhone: buyerPhone || null, quantity });
+    await newOrder.save();
+    slot.ordersCount += quantity;
+    await slot.save();
+    res.status(201).json(newOrder);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/orders/buyer/:buyerName', async (req, res) => {
+  try {
+    const orders = await Order.find({ buyerName: req.params.buyerName }).sort({ createdAt: -1 });
+    const withSlots = await Promise.all(orders.map(async (order) => {
+      const slot = await Slot.findById(order.slotId);
+      return {
+        _id: order._id,
+        quantity: order.quantity,
+        createdAt: order.createdAt,
+        slot: slot ? {
+          _id: slot._id,
+          sellerName: slot.sellerName,
+          mealType: slot.mealType,
+          mealTime: slot.mealTime,
+          cutoffTime: slot.cutoffTime,
+          items: slot.items,
+          pricePerPortion: slot.pricePerPortion,
+          upiId: slot.upiId,
+          sellerPhone: slot.sellerPhone,
+          canCancel: new Date(slot.cutoffTime) > new Date()
+        } : null
+      };
+    }));
+    res.json(withSlots);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/orders/:id', async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    const slot = await Slot.findById(order.slotId);
+    if (slot) {
+      if (new Date(slot.cutoffTime) <= new Date()) {
+        return res.status(400).json({ error: 'Cannot cancel — ordering window has closed' });
+      }
+      slot.ordersCount = Math.max(0, slot.ordersCount - order.quantity);
+      await slot.save();
+    }
+
+    await Order.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/slots/:id/countdown', async (req, res) => {
+  try {
+    const slot = await Slot.findById(req.params.id);
+    if (!slot) return res.status(404).json({ error: 'Slot not found' });
+    const msRemaining = new Date(slot.cutoffTime) - new Date();
+    res.json({ slotId: slot._id, isOpen: msRemaining > 0, minutesRemaining: Math.max(0, Math.floor(msRemaining / 60000)) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/', (req, res) => res.send('FoodTime backend is running!'));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`FoodTime server running on port ${PORT}`));
