@@ -204,8 +204,8 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API_BASE = 'https://foodfoodtime-backend.onrender.com';
-emailjs.init({ publicKey: '22IBx5OU8nz_0PCUe' });
+  const API_BASE = 'https://foodfoodtime-backend.onrender.com';
+const EMAILJS_PUBLIC_KEY = '22IBx5OU8nz_0PCUe';
 const EMAILJS_SERVICE = 'service_ze37a95';
 const EMAILJS_BUYER_TEMPLATE = 'template_4e5ix35';
 const EMAILJS_SELLER_TEMPLATE = 'template_5z57cbb';
@@ -258,7 +258,6 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
-// ---- Reverse geocode lat/lng into a readable address (free, no key) ----
 async function reverseGeocode(lat, lng) {
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`);
@@ -269,7 +268,6 @@ async function reverseGeocode(lat, lng) {
   }
 }
 
-// ---- Forward geocode a typed address into lat/lng (free, no key) ----
 async function forwardGeocode(address) {
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`);
@@ -281,7 +279,6 @@ async function forwardGeocode(address) {
   }
 }
 
-// ==================== BUYER: LOCATION ====================
 document.getElementById('btn-locate').addEventListener('click', async () => {
   const statusEl = document.getElementById('loc-status');
   const btn = document.getElementById('btn-locate');
@@ -340,7 +337,6 @@ document.getElementById('radius-select').addEventListener('change', () => {
   if (buyerLocOn) loadFeed();
 });
 
-// ==================== BUYER: FEED ====================
 async function loadFeed() {
   const feed = document.getElementById('buyer-feed');
   feed.innerHTML = '<p class="empty">Loading nearby meals…</p>';
@@ -384,4 +380,368 @@ function renderBuyerCard(slot) {
     <p class="items">${escapeHtml(slot.items)}</p>
     <div class="meta-row">
       <span class="price-tag">₹${price} / portion</span>
-      <span>${portionsLeft > 0 ? portionsLeft + ' left' : '
+      <span>${portionsLeft > 0 ? portionsLeft + ' left' : 'Sold out'}</span>
+    </div>
+    <div class="meta-row">
+      <span>${slot.location ? escapeHtml(slot.location) + ' · ' : ''}${formatMealTime(slot.mealTime)}</span>
+      ${slot.distanceKm != null ? `<span class="distance-tag">${slot.distanceKm.toFixed(1)} km away</span>` : ''}
+    </div>
+    <div class="cd-slot ${isOpen ? '' : 'status-locked'}" data-cutoff="${slot.cutoffTime}"></div>
+    ${isOpen && portionsLeft > 0 ? `
+      <div class="order-row">
+        <input type="text" placeholder="Your name" id="buyer-name-${slot._id}">
+        <input type="number" placeholder="Qty" min="1" max="${portionsLeft}" value="1" id="buyer-qty-${slot._id}" style="max-width:70px;" oninput="updateOrderTotal('${slot._id}', ${price})">
+      </div>
+      <input type="text" placeholder="Your phone (for WhatsApp)" id="buyer-phone-${slot._id}" value="+91 ">
+      <input type="email" placeholder="Your email (for order confirmation)" id="buyer-email-${slot._id}">
+      <div class="order-total" id="order-total-${slot._id}">Total: <span>₹${price}</span></div>
+      ${slot.upiId ? `
+        <button class="btn btn-upi" onclick="startUpiPayment('${slot._id}','${escapeHtml(slot.upiId)}','${escapeHtml(slot.sellerName)}',${price},${portionsLeft})">💳 Pay via UPI &amp; Order</button>
+        <button class="btn btn-primary" id="confirm-order-${slot._id}" style="display:none;" onclick="placeOrder('${slot._id}', ${portionsLeft})">✅ I've Paid — Confirm Order</button>
+      ` : `<button class="btn btn-primary" onclick="placeOrder('${slot._id}', ${portionsLeft})">Order Now</button>`}
+    ` : `<button class="btn" disabled>${portionsLeft <= 0 ? 'Sold Out' : 'Ordering Closed'}</button>`}
+  `;
+  updateCountdownEl(div.querySelector('.cd-slot'), slot.cutoffTime, isOpen);
+  return div;
+}
+
+function updateOrderTotal(slotId, price) {
+  const qty = parseInt(document.getElementById(`buyer-qty-${slotId}`).value) || 0;
+  document.getElementById(`order-total-${slotId}`).innerHTML = `Total: <span>₹${qty * price}</span>`;
+}
+
+function startUpiPayment(slotId, upiId, sellerName, price, maxLeft) {
+  const buyerName = document.getElementById(`buyer-name-${slotId}`).value.trim();
+  const quantity = parseInt(document.getElementById(`buyer-qty-${slotId}`).value);
+  if (!buyerName) return showToast('Please enter your name');
+  if (!quantity || quantity < 1) return showToast('Please enter a valid quantity');
+  if (quantity > maxLeft) return showToast(`Only ${maxLeft} portions left`);
+
+  const amount = quantity * price;
+  const link = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(sellerName)}&am=${amount}&cu=INR&tn=FoodTime%20Order`;
+  window.location.href = link;
+
+  const confirmBtn = document.getElementById(`confirm-order-${slotId}`);
+  if (confirmBtn) confirmBtn.style.display = 'block';
+  showToast("Complete payment in your UPI app, then tap \"I've Paid\".");
+}
+
+function updateCountdownEl(el, cutoffIso, isOpen) {
+  if (!el) return;
+  const parts = countdownParts(cutoffIso);
+  if (!isOpen || !parts) {
+    el.innerHTML = `<div class="dial-wrap"><div class="dial" style="--pct:0"></div><div class="countdown-text"><div class="countdown-value mono">Closed</div><div class="countdown-label">Ordering window has passed</div></div></div>`;
+    return;
+  }
+  const pct = Math.max(4, Math.min(100, Math.round((parts.ms / (3*60*60*1000)) * 100)));
+  const timeStr = parts.h > 0 ? `${parts.h}h ${parts.m}m` : `${parts.m}m`;
+  el.innerHTML = `<div class="dial-wrap"><div class="dial" style="--pct:${pct}"></div><div class="countdown-text"><div class="countdown-value mono">${timeStr}</div><div class="countdown-label">left to order</div></div></div>`;
+}
+
+setInterval(() => {
+  document.querySelectorAll('.cd-slot').forEach(el => {
+    const cutoff = el.dataset.cutoff;
+    updateCountdownEl(el, cutoff, new Date(cutoff) > new Date());
+  });
+}, 30000);
+
+setInterval(() => {
+  if (document.getElementById('view-buyer').classList.contains('active')) loadFeed();
+}, 120000);
+
+async function placeOrder(slotId, maxLeft) {
+  const buyerName = document.getElementById(`buyer-name-${slotId}`).value.trim();
+  const quantity = parseInt(document.getElementById(`buyer-qty-${slotId}`).value);
+  const buyerPhone = document.getElementById(`buyer-phone-${slotId}`).value.trim();
+  const buyerEmail = document.getElementById(`buyer-email-${slotId}`).value.trim();
+
+  if (!buyerName) return showToast('Please enter your name');
+  if (!quantity || quantity < 1) return showToast('Please enter a valid quantity');
+  if (quantity > maxLeft) return showToast(`Only ${maxLeft} portions left`);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/orders`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slotId, buyerName, buyerPhone, buyerEmail, quantity })
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error || 'Could not place order');
+    sendOrderEmails(slotId, buyerName, buyerEmail, quantity);
+    showToast('Order placed! The seller has been notified.');
+    loadFeed();
+  } catch (err) {
+    showToast('Network error — please try again');
+  }
+}
+
+function sendOrderEmails(slotId, buyerName, buyerEmail, quantity) {
+  try {
+    if (typeof emailjs === 'undefined') return;
+    if (!window._emailjsInitDone) {
+      emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+      window._emailjsInitDone = true;
+    }
+    const slot = slotsById[slotId];
+    if (!slot) return;
+    const total = quantity * (slot.pricePerPortion || 0);
+    const common = { buyer_name: buyerName, items: slot.items, quantity, total };
+
+    if (buyerEmail) {
+      emailjs.send(EMAILJS_SERVICE, EMAILJS_BUYER_TEMPLATE, {
+        ...common, to_name: buyerName, email: buyerEmail, order_id: slotId
+      }).catch(() => {});
+    }
+    if (slot.sellerEmail) {
+      emailjs.send(EMAILJS_SERVICE, EMAILJS_SELLER_TEMPLATE, {
+        ...common, to_name: slot.sellerName, email: slot.sellerEmail, order_id: slotId
+      }).catch(() => {});
+    }
+  } catch (err) {
+    // Email is a nice-to-have — never let it break order placement
+  }
+}
+</script>
+<script>
+document.getElementById('btn-load-myorders').addEventListener('click', async () => {
+  const name = document.getElementById('mo-name').value.trim();
+  const container = document.getElementById('my-orders-list');
+  if (!name) return showToast('Enter your name first');
+
+  container.innerHTML = '<p class="empty">Loading…</p>';
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/buyer/${encodeURIComponent(name)}`);
+    const orders = await res.json();
+    if (!orders.length) {
+      container.innerHTML = `<div class="empty"><p class="display">No orders yet</p><p>Orders you place will show up here.</p></div>`;
+      return;
+    }
+    container.innerHTML = '';
+    orders.forEach(order => {
+      if (!order.slot) return;
+      const s = order.slot;
+      const total = (s.pricePerPortion || 0) * order.quantity;
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = `
+        <div class="card-top">
+          <div>
+            <span class="meal-type">${s.mealType}</span>
+            <h3 class="seller-name">${escapeHtml(s.sellerName)}</h3>
+          </div>
+          <span class="${s.canCancel ? 'badge-open' : 'badge-locked'}">${s.canCancel ? 'Upcoming' : 'Locked'}</span>
+        </div>
+        <p class="items">${escapeHtml(s.items)}</p>
+        <div class="meta-row">
+          <span>Qty: ${order.quantity}</span>
+          <span class="price-tag">₹${total}</span>
+        </div>
+        <div class="meta-row">
+          <span>${formatMealTime(s.mealTime)}</span>
+          <span>Cutoff: ${formatMealTime(s.cutoffTime)}</span>
+        </div>
+        <div class="btn-row">
+          ${s.canCancel ? `<button class="btn btn-danger" onclick="cancelOrder('${order._id}')">Cancel Order</button>` : ''}
+        </div>
+        <div class="section-label">Seller Contact</div>
+        <div class="order-detail-row">
+          <span>${s.sellerPhone ? '📞 ' + escapeHtml(s.sellerPhone) : 'Not provided'}</span>
+          ${s.sellerPhone ? `<a href="https://wa.me/${escapeHtml(s.sellerPhone).replace(/[^0-9]/g,'')}" target="_blank" style="color:var(--leaf-deep);font-weight:700;font-size:12.5px;">Open WhatsApp</a>` : ''}
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="empty"><p>Couldn't load your orders. Try again.</p></div>`;
+  }
+});
+
+async function cancelOrder(orderId) {
+  if (!confirm('Cancel this order? Refund eligibility depends on how long ago you ordered — see the notice at the bottom of the app.')) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/${orderId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error || 'Could not cancel order');
+    const msg = data.refundPolicy === 'full' ? 'Order cancelled — full refund applies. Contact the seller to arrange it.'
+      : data.refundPolicy === 'half' ? 'Order cancelled — 50% refund applies. Contact the seller to arrange it.'
+      : 'Order cancelled — no refund applies as per policy.';
+    showToast(msg);
+    document.getElementById('btn-load-myorders').click();
+  } catch (err) {
+    showToast('Network error — please try again');
+  }
+}
+
+function messageSeller(phone, sellerName, items, qty) {
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  const msg = `Hi ${sellerName}, I ordered ${qty} portion(s) of "${items}" via FoodTime. Just checking in!`;
+  window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+function messageBuyer(phone, buyerName, items, qty) {
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  const msg = `Hi ${buyerName}, this is regarding your FoodTime order of ${qty} portion(s) of "${items}".`;
+  window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+document.getElementById('btn-share-location').addEventListener('click', async () => {
+  const statusEl = document.getElementById('share-loc-status');
+  const btn = document.getElementById('btn-share-location');
+  const addressInput = document.getElementById('s-location');
+
+  if (sellerLocOn) {
+    sellerLocOn = false;
+    sellerLat = null; sellerLng = null;
+    btn.textContent = '📍 Use My Location';
+    btn.classList.remove('active-on');
+    statusEl.textContent = 'Location turned off.';
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    statusEl.textContent = "Location not supported on this browser.";
+    return;
+  }
+  statusEl.textContent = 'Getting location…';
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      sellerLat = pos.coords.latitude;
+      sellerLng = pos.coords.longitude;
+      sellerLocOn = true;
+      btn.textContent = '📍 Located';
+      btn.classList.add('active-on');
+      statusEl.textContent = 'Looking up address…';
+      const addr = await reverseGeocode(sellerLat, sellerLng);
+      addressInput.value = addr;
+      statusEl.textContent = 'Location pinned ✓';
+    },
+    () => { statusEl.textContent = 'Could not get location. Check permissions.'; }
+  );
+});
+
+document.getElementById('s-location').addEventListener('change', async () => {
+  if (sellerLocOn) return;
+  const val = document.getElementById('s-location').value.trim();
+  if (!val) return;
+  const coords = await forwardGeocode(val);
+  if (coords) {
+    sellerLat = coords.lat; sellerLng = coords.lng;
+    document.getElementById('share-loc-status').textContent = 'Address pinned ✓';
+  }
+});
+
+document.getElementById('btn-post').addEventListener('click', async () => {
+  const sellerName = document.getElementById('s-name').value.trim();
+  const mealType = document.getElementById('s-mealtype').value;
+  const mealTime = document.getElementById('s-mealtime').value;
+  const items = document.getElementById('s-items').value.trim();
+  const pricePerPortion = parseInt(document.getElementById('s-price').value);
+  const maxPortions = parseInt(document.getElementById('s-portions').value);
+  const location = document.getElementById('s-location').value.trim();
+  const upiId = document.getElementById('s-upi').value.trim();
+  const sellerPhone = document.getElementById('s-phone').value.trim();
+  const sellerEmail = document.getElementById('s-email').value.trim();
+
+  if (!sellerName || !mealTime || !items || !maxPortions || !pricePerPortion) {
+    return showToast('Please fill in all required fields, including price');
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/slots`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sellerName, mealType, mealTime, items, maxPortions, pricePerPortion, location,
+        latitude: sellerLat, longitude: sellerLng, upiId, sellerPhone, sellerEmail
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error || 'Could not publish menu');
+    showToast('Menu published!');
+    document.getElementById('s-items').value = '';
+    document.getElementById('s-portions').value = '';
+    document.getElementById('s-price').value = '';
+  } catch (err) {
+    showToast('Network error — please try again');
+  }
+});
+
+document.getElementById('btn-refresh-orders').addEventListener('click', async () => {
+  const name = document.getElementById('o-name').value.trim();
+  const container = document.getElementById('seller-slots');
+  if (!name) return showToast('Enter your seller name first');
+
+  container.innerHTML = '<p class="empty">Loading…</p>';
+  try {
+    const res = await fetch(`${API_BASE}/api/slots/seller/${encodeURIComponent(name)}`);
+    const slots = await res.json();
+    if (!slots.length) {
+      container.innerHTML = `<div class="empty"><p class="display">No menus yet</p><p>Post your first menu to see orders here.</p></div>`;
+      return;
+    }
+    container.innerHTML = '';
+    for (const slot of slots) {
+      const isOpen = new Date(slot.cutoffTime) > new Date();
+      const revenue = (slot.pricePerPortion || 0) * slot.ordersCount;
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = `
+        <div class="card-top">
+          <div>
+            <span class="meal-type">${slot.mealType}</span>
+            <h3 class="seller-name">${formatMealTime(slot.mealTime)}</h3>
+          </div>
+          <span class="${isOpen ? 'badge-open' : 'badge-locked'}">${isOpen ? 'Taking orders' : 'Locked'}</span>
+        </div>
+        <p class="items">${escapeHtml(slot.items)}</p>
+        <div class="meta-row">
+          <span class="price-tag">₹${slot.pricePerPortion || 0} / portion</span>
+          <span>Cutoff: ${formatMealTime(slot.cutoffTime)}</span>
+        </div>
+        <div class="meta-row">
+          <span class="mono" style="font-weight:700;color:var(--ink);">${slot.ordersCount} / ${slot.maxPortions} ordered</span>
+          <span class="price-tag">₹${revenue} so far</span>
+        </div>
+        <div class="section-label">Buyer Orders</div>
+        <div id="orders-for-${slot._id}"><p style="font-size:13px;color:var(--ink-soft);">Loading orders…</p></div>
+      `;
+      container.appendChild(div);
+      loadOrdersForSlot(slot._id);
+    }
+  } catch (err) {
+    container.innerHTML = `<div class="empty"><p>Couldn't load your menus. Try again.</p></div>`;
+  }
+});
+
+async function loadOrdersForSlot(slotId) {
+  const target = document.getElementById(`orders-for-${slotId}`);
+  try {
+    const res = await fetch(`${API_BASE}/api/slots/${slotId}/orders`);
+    const orders = await res.json();
+    if (!orders.length) {
+      target.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);">No orders yet.</p>`;
+      return;
+    }
+    target.innerHTML = orders.map(o => `
+      <div class="order-detail-row">
+        <span>${escapeHtml(o.buyerName)} — Qty ${o.quantity}</span>
+        <span style="text-align:right;">
+          ${o.buyerPhone ? `📞 ${escapeHtml(o.buyerPhone)}` : 'No phone'}
+          ${o.buyerPhone ? `<br><a href="https://wa.me/${escapeHtml(o.buyerPhone).replace(/[^0-9]/g,'')}" target="_blank" style="color:var(--leaf-deep);font-weight:700;font-size:12px;">Open WhatsApp</a>` : ''}
+        </span>
+      </div>
+    `).join('');
+  } catch (err) {
+    target.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);">Couldn't load orders.</p>`;
+  }
+}
+
+(function setDefaultTime() {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 240);
+  const iso = new Date(now.getTime() - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  document.getElementById('s-mealtime').value = iso;
+})();
+
+loadFeed();
+</script>
+</body>
+</html>
