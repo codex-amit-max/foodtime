@@ -191,8 +191,11 @@
   <div class="subview" id="sub-orders">
     <label>Your Name (same as used to post)</label>
     <input type="text" id="o-name" placeholder="e.g. Amit's Kitchen">
-    <button class="btn btn-secondary" id="btn-refresh-orders">View My Slots</button>
-    <div id="seller-slots" style="margin-top:16px;"></div>
+    <button class="btn btn-secondary" id="btn-refresh-orders">View My Order Queue</button>
+    <div class="section-label" style="margin-top:18px;">Order Queue</div>
+    <div id="seller-queue"></div>
+    <div class="section-label" style="margin-top:18px;">Your Menus</div>
+    <div id="seller-slots" style="margin-top:8px;"></div>
   </div>
 </div>
 
@@ -204,7 +207,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const API_BASE = 'https://foodfoodtime-backend.onrender.com';
+const API_BASE = 'https://foodfoodtime-backend.onrender.com';
 const EMAILJS_PUBLIC_KEY = '22IBx5OU8nz_0PCUe';
 const EMAILJS_SERVICE = 'service_ze37a95';
 const EMAILJS_BUYER_TEMPLATE = 'template_4e5ix35';
@@ -396,7 +399,7 @@ function renderBuyerCard(slot) {
       <input type="email" placeholder="Your email (for order confirmation)" id="buyer-email-${slot._id}">
       <div class="order-total" id="order-total-${slot._id}">Total: <span>₹${price}</span></div>
       ${slot.upiId ? `
-        <button class="btn btn-upi" onclick="startUpiPayment('${slot._id}','${escapeHtml(slot.upiId)}','${escapeHtml(slot.sellerName)}',${price},${portionsLeft})">💳 Pay via UPI &amp; Order</button>
+        <button class="btn btn-upi" onclick="startUpiPayment('${slot._id}')">💳 Pay via UPI &amp; Order</button>
         <button class="btn btn-primary" id="confirm-order-${slot._id}" style="display:none;" onclick="placeOrder('${slot._id}', ${portionsLeft})">✅ I've Paid — Confirm Order</button>
       ` : `<button class="btn btn-primary" onclick="placeOrder('${slot._id}', ${portionsLeft})">Order Now</button>`}
     ` : `<button class="btn" disabled>${portionsLeft <= 0 ? 'Sold Out' : 'Ordering Closed'}</button>`}
@@ -410,15 +413,18 @@ function updateOrderTotal(slotId, price) {
   document.getElementById(`order-total-${slotId}`).innerHTML = `Total: <span>₹${qty * price}</span>`;
 }
 
-function startUpiPayment(slotId, upiId, sellerName, price, maxLeft) {
+function startUpiPayment(slotId) {
+  const slot = slotsById[slotId];
+  if (!slot) return showToast('Something went wrong — please refresh and try again.');
   const buyerName = document.getElementById(`buyer-name-${slotId}`).value.trim();
   const quantity = parseInt(document.getElementById(`buyer-qty-${slotId}`).value);
+  const maxLeft = slot.maxPortions - slot.ordersCount;
   if (!buyerName) return showToast('Please enter your name');
   if (!quantity || quantity < 1) return showToast('Please enter a valid quantity');
   if (quantity > maxLeft) return showToast(`Only ${maxLeft} portions left`);
 
-  const amount = quantity * price;
-  const link = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(sellerName)}&am=${amount}&cu=INR&tn=FoodTime%20Order`;
+  const amount = quantity * (slot.pricePerPortion || 0);
+  const link = `upi://pay?pa=${encodeURIComponent(slot.upiId)}&pn=${encodeURIComponent(slot.sellerName)}&am=${amount}&cu=INR&tn=FoodTime%20Order`;
   window.location.href = link;
 
   const confirmBtn = document.getElementById(`confirm-order-${slotId}`);
@@ -522,13 +528,16 @@ document.getElementById('btn-load-myorders').addEventListener('click', async () 
       const total = (s.pricePerPortion || 0) * order.quantity;
       const div = document.createElement('div');
       div.className = 'card';
+      const labels = { pending: 'Pending Acceptance', accepted: 'Accepted', rejected: 'Rejected', cancelled_by_buyer: 'Cancelled by you', cancelled_by_seller: 'Cancelled by seller' };
+      const statusLabel = labels[order.status] || (s.canCancel ? 'Upcoming' : 'Locked');
+      const canCancel = s.canCancel && (order.status === 'pending' || order.status === 'accepted');
       div.innerHTML = `
         <div class="card-top">
           <div>
             <span class="meal-type">${s.mealType}</span>
             <h3 class="seller-name">${escapeHtml(s.sellerName)}</h3>
           </div>
-          <span class="${s.canCancel ? 'badge-open' : 'badge-locked'}">${s.canCancel ? 'Upcoming' : 'Locked'}</span>
+          <span class="${order.status === 'accepted' ? 'badge-open' : 'badge-locked'}">${statusLabel}</span>
         </div>
         <p class="items">${escapeHtml(s.items)}</p>
         <div class="meta-row">
@@ -539,8 +548,9 @@ document.getElementById('btn-load-myorders').addEventListener('click', async () 
           <span>${formatMealTime(s.mealTime)}</span>
           <span>Cutoff: ${formatMealTime(s.cutoffTime)}</span>
         </div>
+        ${order.cancelReason ? `<div class="meta-row"><span style="color:var(--sindoor);">Reason: ${escapeHtml(order.cancelReason)}</span></div>` : ''}
         <div class="btn-row">
-          ${s.canCancel ? `<button class="btn btn-danger" onclick="cancelOrder('${order._id}')">Cancel Order</button>` : ''}
+          ${canCancel ? `<button class="btn btn-danger" onclick="cancelOrder('${order._id}')">Cancel Order</button>` : ''}
         </div>
         <div class="section-label">Seller Contact</div>
         <div class="order-detail-row">
@@ -666,9 +676,113 @@ document.getElementById('btn-post').addEventListener('click', async () => {
 
 document.getElementById('btn-refresh-orders').addEventListener('click', async () => {
   const name = document.getElementById('o-name').value.trim();
-  const container = document.getElementById('seller-slots');
   if (!name) return showToast('Enter your seller name first');
+  loadSellerQueue(name);
+  loadSellerSlots(name);
+});
 
+async function loadSellerQueue(sellerName) {
+  const container = document.getElementById('seller-queue');
+  container.innerHTML = '<p class="empty">Loading queue…</p>';
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/seller/${encodeURIComponent(sellerName)}`);
+    const orders = await res.json();
+    if (!orders.length) {
+      container.innerHTML = `<div class="empty"><p class="display">No orders yet</p><p>Orders from buyers will show up here.</p></div>`;
+      return;
+    }
+    container.innerHTML = '';
+    orders.forEach(o => { if (o.slot) container.appendChild(renderQueueCard(o, sellerName)); });
+  } catch (err) {
+    container.innerHTML = `<div class="empty"><p>Couldn't load your order queue.</p></div>`;
+  }
+}
+
+function renderQueueCard(o, sellerName) {
+  const div = document.createElement('div');
+  div.className = 'card';
+  const s = o.slot;
+  const total = (s.pricePerPortion || 0) * o.quantity;
+  const labels = { pending: 'Pending', accepted: 'Accepted', rejected: 'Rejected', cancelled_by_buyer: 'Cancelled by buyer', cancelled_by_seller: 'Cancelled by you' };
+  const statusLabel = labels[o.status] || o.status;
+  const isActive = o.status === 'pending' || o.status === 'accepted';
+
+  div.innerHTML = `
+    <div class="card-top">
+      <div>
+        <span class="meal-type">${s.mealType}</span>
+        <h3 class="seller-name">${escapeHtml(o.buyerName)}</h3>
+      </div>
+      <span class="${o.status === 'accepted' ? 'badge-open' : 'badge-locked'}">${statusLabel}</span>
+    </div>
+    <p class="items">${escapeHtml(s.items)}</p>
+    <div class="meta-row"><span>${formatMealTime(s.mealTime)}</span><span>Cutoff: ${formatMealTime(s.cutoffTime)}</span></div>
+    <div class="meta-row"><span class="mono" style="font-weight:700;color:var(--ink);">${o.quantity} portion(s)</span><span class="price-tag">₹${total}</span></div>
+    ${o.buyerPhone ? `<div class="meta-row"><span>📞 ${escapeHtml(o.buyerPhone)}</span><a href="https://wa.me/${escapeHtml(o.buyerPhone).replace(/[^0-9]/g,'')}" target="_blank" style="color:var(--leaf-deep);font-weight:700;font-size:12.5px;">Open WhatsApp</a></div>` : ''}
+    ${o.cancelReason ? `<div class="meta-row"><span style="color:var(--sindoor);">Reason: ${escapeHtml(o.cancelReason)}</span></div>` : ''}
+    ${isActive ? `
+      <div class="order-row">
+        <input type="number" min="1" value="${o.quantity}" id="edit-qty-${o._id}">
+        <button class="btn btn-secondary" style="width:auto;margin-top:0;padding:0 16px;" onclick="editOrderQty('${o._id}','${encodeURIComponent(sellerName)}')">Update</button>
+      </div>
+      <div class="btn-row">
+        ${o.status === 'pending' ? `<button class="btn btn-primary" onclick="acceptOrder('${o._id}','${encodeURIComponent(sellerName)}')">Accept</button>` : ''}
+        <button class="btn btn-danger" onclick="sellerCancelOrder('${o._id}','${encodeURIComponent(sellerName)}')">Cancel</button>
+      </div>
+    ` : ''}
+  `;
+  return div;
+}
+
+async function acceptOrder(orderId, sellerNameEnc) {
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/${orderId}/accept`, { method: 'PATCH' });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error || 'Could not accept order');
+    showToast('Order accepted.');
+    loadSellerQueue(decodeURIComponent(sellerNameEnc));
+  } catch (err) {
+    showToast('Network error — please try again');
+  }
+}
+
+async function sellerCancelOrder(orderId, sellerNameEnc) {
+  const reason = prompt('Please provide a reason for cancelling this order (the buyer will see this):');
+  if (reason === null) return;
+  if (!reason.trim()) return showToast('A reason is required to cancel an order.');
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/${orderId}/seller-cancel`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason })
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error || 'Could not cancel order');
+    showToast('Order cancelled.');
+    loadSellerQueue(decodeURIComponent(sellerNameEnc));
+  } catch (err) {
+    showToast('Network error — please try again');
+  }
+}
+
+async function editOrderQty(orderId, sellerNameEnc) {
+  const qty = parseInt(document.getElementById(`edit-qty-${orderId}`).value);
+  if (!qty || qty < 1) return showToast('Enter a valid quantity');
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/${orderId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity: qty })
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error || 'Could not update quantity');
+    showToast('Quantity updated.');
+    loadSellerQueue(decodeURIComponent(sellerNameEnc));
+  } catch (err) {
+    showToast('Network error — please try again');
+  }
+}
+
+async function loadSellerSlots(name) {
+  const container = document.getElementById('seller-slots');
   container.innerHTML = '<p class="empty">Loading…</p>';
   try {
     const res = await fetch(`${API_BASE}/api/slots/seller/${encodeURIComponent(name)}`);
@@ -700,37 +814,11 @@ document.getElementById('btn-refresh-orders').addEventListener('click', async ()
           <span class="mono" style="font-weight:700;color:var(--ink);">${slot.ordersCount} / ${slot.maxPortions} ordered</span>
           <span class="price-tag">₹${revenue} so far</span>
         </div>
-        <div class="section-label">Buyer Orders</div>
-        <div id="orders-for-${slot._id}"><p style="font-size:13px;color:var(--ink-soft);">Loading orders…</p></div>
       `;
       container.appendChild(div);
-      loadOrdersForSlot(slot._id);
     }
   } catch (err) {
     container.innerHTML = `<div class="empty"><p>Couldn't load your menus. Try again.</p></div>`;
-  }
-});
-
-async function loadOrdersForSlot(slotId) {
-  const target = document.getElementById(`orders-for-${slotId}`);
-  try {
-    const res = await fetch(`${API_BASE}/api/slots/${slotId}/orders`);
-    const orders = await res.json();
-    if (!orders.length) {
-      target.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);">No orders yet.</p>`;
-      return;
-    }
-    target.innerHTML = orders.map(o => `
-      <div class="order-detail-row">
-        <span>${escapeHtml(o.buyerName)} — Qty ${o.quantity}</span>
-        <span style="text-align:right;">
-          ${o.buyerPhone ? `📞 ${escapeHtml(o.buyerPhone)}` : 'No phone'}
-          ${o.buyerPhone ? `<br><a href="https://wa.me/${escapeHtml(o.buyerPhone).replace(/[^0-9]/g,'')}" target="_blank" style="color:var(--leaf-deep);font-weight:700;font-size:12px;">Open WhatsApp</a>` : ''}
-        </span>
-      </div>
-    `).join('');
-  } catch (err) {
-    target.innerHTML = `<p style="font-size:13px;color:var(--ink-soft);">Couldn't load orders.</p>`;
   }
 }
 
