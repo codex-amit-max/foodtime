@@ -28,6 +28,9 @@
   --leaf-deep: #354833;
   --line: #E3D8C3;
   --card: #FFFFFF;
+  --warning: #B7791F;
+  --success: #4C6444;
+  --danger: #A63D2F;
 }
 
 * {
@@ -43,7 +46,10 @@ body {
   padding-bottom: 40px;
 }
 
-h1, h2, h3, .display {
+h1,
+h2,
+h3,
+.display {
   font-family: 'Rozha One', serif;
   font-weight: 400;
   letter-spacing: 0.2px;
@@ -52,6 +58,10 @@ h1, h2, h3, .display {
 .mono {
   font-family: 'Space Mono', monospace;
 }
+
+/* =========================
+   HEADER
+========================= */
 
 header {
   background: var(--sindoor);
@@ -86,6 +96,10 @@ header::after {
   position: relative;
 }
 
+/* =========================
+   MAIN TABS
+========================= */
+
 .tabs {
   display: flex;
   margin: -36px 16px 20px;
@@ -108,12 +122,17 @@ header::after {
   font-size: 14.5px;
   color: var(--ink-soft);
   cursor: pointer;
+  transition: background 0.2s, color 0.2s;
 }
 
 .tab-btn.active {
   background: var(--sindoor);
   color: var(--ivory);
 }
+
+/* =========================
+   VIEWS
+========================= */
 
 .view {
   display: none;
@@ -123,6 +142,10 @@ header::after {
 .view.active {
   display: block;
 }
+
+/* =========================
+   SUB TABS
+========================= */
 
 .subtabs {
   display: flex;
@@ -156,6 +179,10 @@ header::after {
   display: block;
 }
 
+/* =========================
+   LOCATION
+========================= */
+
 .location-bar {
   background: var(--card);
   border: 1.5px solid var(--line);
@@ -182,6 +209,7 @@ header::after {
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  transition: background 0.2s, color 0.2s;
 }
 
 .loc-btn.active-on {
@@ -208,6 +236,10 @@ header::after {
   margin-top: 10px;
   margin-bottom: 0;
 }
+
+/* =========================
+   CARDS
+========================= */
 
 .card {
   background: var(--card);
@@ -242,16 +274,17 @@ header::after {
   font-size: 14.5px;
   margin: 10px 0;
   line-height: 1.5;
+  color: var(--ink);
 }
 
 .meta-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
   margin-top: 10px;
   font-size: 13px;
   color: var(--ink-soft);
+  gap: 10px;
 }
 
 .price-tag {
@@ -266,6 +299,10 @@ header::after {
   color: var(--leaf-deep);
   font-weight: 600;
 }
+
+/* =========================
+   COUNTDOWN
+========================= */
 
 .dial-wrap {
   display: flex;
@@ -319,6 +356,10 @@ header::after {
   background: var(--ivory-dim);
 }
 
+/* =========================
+   BUTTONS
+========================= */
+
 .btn {
   width: 100%;
   border: none;
@@ -336,14 +377,22 @@ header::after {
   color: var(--ivory);
 }
 
+.btn-primary:active {
+  background: var(--sindoor-deep);
+}
+
 .btn-secondary {
   background: var(--leaf);
   color: var(--ivory);
 }
 
+.btn-secondary:active {
+  background: var(--leaf-deep);
+}
+
 .btn-whatsapp {
   background: #25D366;
-  color: #fff;
+  color: #ffffff;
 }
 
 .btn-upi {
@@ -355,6 +404,11 @@ header::after {
   background: var(--card);
   color: var(--sindoor);
   border: 1.5px solid var(--sindoor);
+}
+
+.btn-success {
+  background: var(--leaf);
+  color: var(--ivory);
 }
 
 .btn-warning {
@@ -377,9 +431,9 @@ header::after {
   margin-top: 10px;
 }
 
-.btn-row .btn {
-  flex: 1;
-}
+/* =========================
+   ORDER INPUTS
+========================= */
 
 .order-row {
   display: flex;
@@ -401,6 +455,10 @@ header::after {
   color: var(--sindoor);
   font-weight: 700;
 }
+
+/* =========================
+   FORMS
+========================= */
 
 input,
 select,
@@ -448,6 +506,10 @@ label {
   padding-left: 26px;
 }
 
+/* =========================
+   LOCATION SHARE
+========================= */
+
 .location-share {
   display: flex;
   align-items: center;
@@ -465,6 +527,10 @@ label {
   color: var(--leaf-deep);
   font-weight: 600;
 }
+
+/* =========================
+   EMPTY / TOAST
+========================= */
 
 .empty {
   text-align: center;
@@ -491,7 +557,7 @@ label {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s, transform 0.25s;
-  z-index: 1000;
+  z-index: 100;
   max-width: 85%;
   text-align: center;
 }
@@ -500,6 +566,10 @@ label {
   opacity: 1;
   transform: translateX(-50%) translateY(-6px);
 }
+
+/* =========================
+   STATUS BADGES
+========================= */
 
 .badge-open {
   display: inline-block;
@@ -527,8 +597,8 @@ label {
 
 .badge-pending {
   display: inline-block;
-  background: var(--turmeric);
-  color: var(--ink);
+  background: #FFF3CD;
+  color: #856404;
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -536,6 +606,46 @@ label {
   border-radius: 20px;
   letter-spacing: 0.5px;
 }
+
+.badge-accepted {
+  display: inline-block;
+  background: var(--leaf);
+  color: var(--ivory);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+.badge-rejected {
+  display: inline-block;
+  background: #FDE8E7;
+  color: var(--sindoor);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+.badge-cancelled {
+  display: inline-block;
+  background: var(--ivory-dim);
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+/* =========================
+   ORDER DETAILS
+========================= */
 
 .order-detail-row {
   display: flex;
@@ -560,6 +670,79 @@ label {
   margin: 14px 0 6px;
 }
 
+/* =========================
+   SELLER ACTIONS
+========================= */
+
+.seller-action-box {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--ivory);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.seller-action-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.accept-reject-row {
+  display: flex;
+  gap: 8px;
+}
+
+.accept-reject-row .btn {
+  margin-top: 0;
+}
+
+.reject-reason {
+  margin-top: 10px;
+  display: none;
+}
+
+.reject-reason.show {
+  display: block;
+}
+
+/* =========================
+   MENU EDITING
+========================= */
+
+.menu-edit-box {
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--ivory);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.menu-edit-box h4 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.edit-note {
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+  margin-bottom: 10px;
+}
+
+.locked-field {
+  background: var(--ivory-dim);
+  color: var(--ink-soft);
+}
+
+/* =========================
+   DISCLAIMER
+========================= */
+
 .disclaimer {
   background: var(--ivory-dim);
   border: 1px solid var(--line);
@@ -579,54 +762,44 @@ label {
   margin-bottom: 0;
 }
 
-.edit-note {
-  background: var(--ivory-dim);
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin: 10px 0;
-  font-size: 12px;
-  color: var(--ink-soft);
-  line-height: 1.45;
-}
+/* =========================
+   MODAL
+========================= */
 
-.edit-note strong {
-  color: var(--ink);
-}
-
-.modal-backdrop {
+.modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(43,33,26,0.55);
   display: none;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  z-index: 900;
-  padding: 0;
+  padding: 20px;
+  z-index: 200;
 }
 
-.modal-backdrop.show {
+.modal-overlay.show {
   display: flex;
 }
 
 .modal {
   width: 100%;
-  max-width: 520px;
-  max-height: 92vh;
-  overflow-y: auto;
-  background: var(--ivory);
-  border-radius: 20px 20px 0 0;
+  max-width: 430px;
+  background: var(--card);
+  border-radius: 18px;
   padding: 20px;
+  box-shadow: 0 15px 40px rgba(43,33,26,0.25);
 }
 
-.modal h2 {
+.modal h3 {
   margin-top: 0;
-  margin-bottom: 5px;
+  font-size: 22px;
 }
 
-.modal-subtitle {
-  font-size: 12.5px;
+.modal-text {
+  font-size: 13px;
   color: var(--ink-soft);
-  margin-bottom: 16px;
+  line-height: 1.5;
+  margin-bottom: 14px;
 }
 
 .modal-actions {
@@ -635,76 +808,64 @@ label {
 }
 
 .modal-actions .btn {
-  flex: 1;
+  margin-top: 0;
 }
 
-.readonly-field {
-  background: var(--ivory-dim);
-  color: var(--ink-soft);
-}
+/* =========================
+   MOBILE
+========================= */
 
-.rule-box {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 14px;
-  background: var(--card);
-}
+@media (max-width: 480px) {
 
-.rule-box p {
-  margin: 4px 0;
-  font-size: 12px;
-  color: var(--ink-soft);
-}
+  .meta-row {
+    align-items: flex-start;
+  }
 
-.rule-box strong {
-  color: var(--ink);
+  .accept-reject-row {
+    flex-direction: column;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
 }
 
 </style>
 </head>
 
 <body>
-
-<header>
+  <header>
   <p class="brand">FoodTime</p>
   <p class="tagline">Home-cooked meals, on the family's clock.</p>
 </header>
 
-
 <div class="tabs">
-  <button class="tab-btn active" data-tab="buyer">
-    Find a Meal
-  </button>
-
-  <button class="tab-btn" data-tab="seller">
-    I'm Cooking
-  </button>
+  <button class="tab-btn active" data-tab="buyer">Find a Meal</button>
+  <button class="tab-btn" data-tab="seller">I'm Cooking</button>
 </div>
 
 
-<!-- ======================================================
-     BUYER
-======================================================= -->
+<!-- =========================================================
+     BUYER VIEW
+========================================================= -->
 
 <div class="view active" id="view-buyer">
 
   <div class="subtabs">
-
-    <button
-      class="subtab-btn active"
-      data-sub="browse">
+    <button class="subtab-btn active" data-sub="browse">
       Browse
     </button>
 
-    <button
-      class="subtab-btn"
-      data-sub="myorders">
+    <button class="subtab-btn" data-sub="myorders">
       My Orders
     </button>
-
   </div>
 
+
+  <!-- =========================
+       BUYER - BROWSE
+  ========================== -->
 
   <div class="subview active" id="sub-browse">
 
@@ -712,36 +873,16 @@ label {
 
       <div class="location-bar-row">
 
-        <button
-          class="loc-btn"
-          id="btn-locate">
+        <button class="loc-btn" id="btn-locate">
           📍 Use My Location
         </button>
 
-        <select
-          class="radius-select"
-          id="radius-select">
-
-          <option value="1">
-            Within 1 km
-          </option>
-
-          <option value="3" selected>
-            Within 3 km
-          </option>
-
-          <option value="5">
-            Within 5 km
-          </option>
-
-          <option value="10">
-            Within 10 km
-          </option>
-
-          <option value="20">
-            Within 20 km
-          </option>
-
+        <select class="radius-select" id="radius-select">
+          <option value="1">Within 1 km</option>
+          <option value="3" selected>Within 3 km</option>
+          <option value="5">Within 5 km</option>
+          <option value="10">Within 10 km</option>
+          <option value="20">Within 20 km</option>
         </select>
 
       </div>
@@ -750,11 +891,10 @@ label {
         type="text"
         class="address-input"
         id="buyer-address"
-        placeholder="Or type your area / address">
+        placeholder="Or type your area / address"
+      >
 
-      <div
-        class="loc-status"
-        id="loc-status">
+      <div class="loc-status" id="loc-status">
         Showing all meals — turn on location or type your address to filter by distance
       </div>
 
@@ -765,36 +905,41 @@ label {
   </div>
 
 
+  <!-- =========================
+       BUYER - MY ORDERS
+  ========================== -->
+
   <div class="subview" id="sub-myorders">
 
-    <label>
-      Your Name (same one used to order)
-    </label>
+    <label>Your Name (same one used to order)</label>
 
     <input
       type="text"
       id="mo-name"
-      placeholder="e.g. Priya">
+      placeholder="e.g. Priya"
+    >
 
     <button
       class="btn btn-secondary"
-      id="btn-load-myorders">
+      id="btn-load-myorders"
+    >
       View My Orders
     </button>
 
     <div
       id="my-orders-list"
-      style="margin-top:16px;">
-    </div>
+      style="margin-top:16px;"
+    ></div>
 
   </div>
 
 </div>
 
 
-<!-- ======================================================
-     SELLER
-======================================================= -->
+
+<!-- =========================================================
+     SELLER VIEW
+========================================================= -->
 
 <div class="view" id="view-seller">
 
@@ -802,20 +947,24 @@ label {
 
     <button
       class="subtab-btn active"
-      data-sub="post">
+      data-sub="post"
+    >
       Post a Menu
     </button>
 
     <button
       class="subtab-btn"
-      data-sub="orders">
+      data-sub="orders"
+    >
       My Orders
     </button>
 
   </div>
 
 
-  <!-- POST MENU -->
+  <!-- =======================================================
+       SELLER - POST MENU
+  ======================================================== -->
 
   <div class="subview active" id="sub-post">
 
@@ -824,7 +973,8 @@ label {
     <input
       type="text"
       id="s-name"
-      placeholder="e.g. Amit's Kitchen">
+      placeholder="e.g. Amit's Kitchen"
+    >
 
 
     <label>Meal Slot</label>
@@ -850,15 +1000,16 @@ label {
 
     <input
       type="datetime-local"
-      id="s-mealtime">
+      id="s-mealtime"
+    >
 
 
     <label>What's on the menu?</label>
 
     <textarea
       id="s-items"
-      placeholder="e.g. Rajma Chawal, salad, extra roti">
-    </textarea>
+      placeholder="e.g. Rajma Chawal, salad, extra roti"
+    ></textarea>
 
 
     <label>Price per Portion</label>
@@ -869,7 +1020,8 @@ label {
         type="number"
         id="s-price"
         min="1"
-        placeholder="e.g. 80">
+        placeholder="e.g. 80"
+      >
 
     </div>
 
@@ -880,8 +1032,11 @@ label {
       type="number"
       id="s-portions"
       min="1"
-      placeholder="e.g. 4">
+      placeholder="e.g. 4"
+    >
 
+
+    <!-- LOCATION -->
 
     <label>Your Location</label>
 
@@ -890,30 +1045,37 @@ label {
       <button
         class="loc-btn"
         id="btn-share-location"
-        type="button">
+        type="button"
+      >
         📍 Use My Location
       </button>
 
       <span
         class="location-share-status"
-        id="share-loc-status">
-      </span>
+        id="share-loc-status"
+      ></span>
 
     </div>
 
     <input
       type="text"
       id="s-location"
-      placeholder="Area / address (auto-filled or type manually)">
+      placeholder="Area / address (auto-filled or type manually)"
+    >
 
+
+    <!-- PAYMENT -->
 
     <label>UPI ID (for buyers to pay you)</label>
 
     <input
       type="text"
       id="s-upi"
-      placeholder="e.g. amit@okhdfcbank">
+      placeholder="e.g. amit@okhdfcbank"
+    >
 
+
+    <!-- CONTACT -->
 
     <label>Phone Number (for WhatsApp orders)</label>
 
@@ -921,7 +1083,8 @@ label {
       type="text"
       id="s-phone"
       value="+91 "
-      placeholder="+91 98XXXXXXXX">
+      placeholder="+91 98XXXXXXXX"
+    >
 
 
     <label>Email (for order notifications)</label>
@@ -929,19 +1092,24 @@ label {
     <input
       type="email"
       id="s-email"
-      placeholder="e.g. amit@gmail.com">
+      placeholder="e.g. amit@gmail.com"
+    >
 
 
     <button
       class="btn btn-primary"
-      id="btn-post">
+      id="btn-post"
+    >
       Publish Menu
     </button>
 
   </div>
 
 
-  <!-- SELLER ORDERS -->
+
+  <!-- =======================================================
+       SELLER - ORDERS
+  ======================================================== -->
 
   <div class="subview" id="sub-orders">
 
@@ -952,19 +1120,21 @@ label {
     <input
       type="text"
       id="o-name"
-      placeholder="e.g. Amit's Kitchen">
-
+      placeholder="e.g. Amit's Kitchen"
+    >
 
     <button
       class="btn btn-secondary"
-      id="btn-refresh-orders">
+      id="btn-refresh-orders"
+    >
       View My Order Queue
     </button>
 
 
     <div
       class="section-label"
-      style="margin-top:18px;">
+      style="margin-top:18px;"
+    >
       Order Queue
     </div>
 
@@ -973,25 +1143,42 @@ label {
 
     <div
       class="section-label"
-      style="margin-top:18px;">
+      style="margin-top:18px;"
+    >
       Your Menus
     </div>
 
     <div
       id="seller-slots"
-      style="margin-top:8px;">
-    </div>
+      style="margin-top:8px;"
+    ></div>
 
   </div>
 
 </div>
 
 
-<!-- ======================================================
-     DISCLAIMER
-======================================================= -->
+
+<!-- =========================================================
+     INFORMATION / POLICY
+========================================================= -->
 
 <div class="disclaimer">
+
+  <p>
+    <strong>Order Acceptance:</strong>
+    Sellers receive every order as a pending request.
+    The seller can accept or reject the request.
+    If an order is rejected, the seller must provide a reason.
+  </p>
+
+  <p>
+    <strong>Menu Editing:</strong>
+    Before an order is accepted, the seller can modify
+    the menu details. Once an order has been accepted,
+    the seller can only increase the available quantity
+    and extend the meal availability time.
+  </p>
 
   <p>
     <strong>Cancellations:</strong>
@@ -1012,34 +1199,72 @@ label {
 </div>
 
 
-<div
-  class="toast"
-  id="toast">
-</div>
 
-
-<!-- ======================================================
-     EDIT MENU MODAL
-======================================================= -->
+<!-- =========================================================
+     REJECTION MODAL
+========================================================= -->
 
 <div
-  class="modal-backdrop"
-  id="edit-modal">
+  class="modal-overlay"
+  id="reject-modal"
+>
 
   <div class="modal">
 
-    <h2>Edit Menu</h2>
+    <h3>Reject Order</h3>
 
-    <div
-      class="modal-subtitle"
-      id="edit-modal-subtitle">
-      Update your menu.
+    <div class="modal-text">
+      Please provide a reason for rejecting this order.
+      The buyer will be able to see this reason.
     </div>
 
+    <textarea
+      id="reject-reason-input"
+      placeholder="e.g. Not enough portions available today"
+    ></textarea>
+
+    <div class="modal-actions">
+
+      <button
+        class="btn btn-danger"
+        id="cancel-reject-btn"
+      >
+        Go Back
+      </button>
+
+      <button
+        class="btn btn-primary"
+        id="confirm-reject-btn"
+      >
+        Reject Order
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<!-- =========================================================
+     MENU EDIT MODAL
+========================================================= -->
+
+<div
+  class="modal-overlay"
+  id="edit-menu-modal"
+>
+
+  <div class="modal">
+
+    <h3>Edit Menu</h3>
 
     <div
-      class="rule-box"
-      id="edit-rule-box">
+      class="modal-text"
+      id="edit-menu-note"
+    >
+      You can change the menu before an order is accepted.
     </div>
 
 
@@ -1066,22 +1291,29 @@ label {
 
     <input
       type="datetime-local"
-      id="edit-mealtime">
+      id="edit-mealtime"
+    >
 
 
     <label>What's on the menu?</label>
 
     <textarea
-      id="edit-items">
-    </textarea>
+      id="edit-items"
+      placeholder="Meal details"
+    ></textarea>
 
 
     <label>Price per Portion</label>
 
-    <input
-      type="number"
-      id="edit-price"
-      min="1">
+    <div class="price-input-wrap">
+
+      <input
+        type="number"
+        id="edit-price"
+        min="1"
+      >
+
+    </div>
 
 
     <label>Available Portions</label>
@@ -1089,48 +1321,31 @@ label {
     <input
       type="number"
       id="edit-portions"
-      min="1">
+      min="1"
+    >
 
 
     <label>Location</label>
 
     <input
       type="text"
-      id="edit-location">
-
-
-    <label>UPI ID</label>
-
-    <input
-      type="text"
-      id="edit-upi">
-
-
-    <label>Phone Number</label>
-
-    <input
-      type="text"
-      id="edit-phone">
-
-
-    <label>Email</label>
-
-    <input
-      type="email"
-      id="edit-email">
+      id="edit-location"
+    >
 
 
     <div class="modal-actions">
 
       <button
         class="btn btn-danger"
-        id="btn-close-edit">
+        id="cancel-menu-edit-btn"
+      >
         Cancel
       </button>
 
       <button
-        class="btn btn-primary"
-        id="btn-save-edit">
+        class="btn btn-secondary"
+        id="save-menu-edit-btn"
+      >
         Save Changes
       </button>
 
@@ -1141,30 +1356,40 @@ label {
 </div>
 
 
-<script>
+
+<!-- =========================================================
+     TOAST
+========================================================= -->
+
+<div
+  class="toast"
+  id="toast"
+></div>
+
+
+<!-- =========================================================
+     PART 3 STARTS HERE
+     
+     IMPORTANT:
+     Do NOT add another <html>, <head>, or <body>.
+     
+     Part 3 will begin with:
+     
+     <script>
+     
+========================================================= -->
+  <script>
+
+const API_BASE = 'https://foodfoodtime-backend.onrender.com';
+
+const EMAILJS_PUBLIC_KEY = '22IBx5OU8nz_0PCUe';
+const EMAILJS_SERVICE = 'service_ze37a95';
+const EMAILJS_BUYER_TEMPLATE = 'template_4e5ix35';
+const EMAILJS_SELLER_TEMPLATE = 'template_5z57cbb';
+
 
 /* =========================================================
-   CONFIG
-========================================================= */
-
-const API_BASE =
-  'https://foodfoodtime-backend.onrender.com';
-
-const EMAILJS_PUBLIC_KEY =
-  '22IBx5OU8nz_0PCUe';
-
-const EMAILJS_SERVICE =
-  'service_ze37a95';
-
-const EMAILJS_BUYER_TEMPLATE =
-  'template_4e5ix35';
-
-const EMAILJS_SELLER_TEMPLATE =
-  'template_5z57cbb';
-
-
-/* =========================================================
-   STATE
+   GLOBAL STATE
 ========================================================= */
 
 let slotsById = {};
@@ -1177,40 +1402,117 @@ let sellerLat = null;
 let sellerLng = null;
 let sellerLocOn = false;
 
-let editingSlotId = null;
-let editingSellerName = null;
-let editingSlotData = null;
+let currentRejectOrderId = null;
+let currentRejectSellerName = null;
+
+let currentEditSlotId = null;
+let currentEditSellerName = null;
 
 
 /* =========================================================
-   BASIC UI
+   BASIC HELPERS
 ========================================================= */
 
-document.querySelectorAll('.tab-btn').forEach(btn => {
+function showToast(message) {
 
-  btn.addEventListener('click', () => {
+  const toast = document.getElementById('toast');
+
+  toast.textContent = message;
+
+  toast.classList.add('show');
+
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2800);
+}
+
+
+function escapeHtml(value) {
+
+  const div = document.createElement('div');
+
+  div.textContent = value || '';
+
+  return div.innerHTML;
+}
+
+
+function formatMealTime(iso) {
+
+  if (!iso) return '';
+
+  const date = new Date(iso);
+
+  return date.toLocaleString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
+
+function toDateTimeLocalValue(iso) {
+
+  if (!iso) return '';
+
+  const date = new Date(iso);
+
+  const offset = date.getTimezoneOffset();
+
+  const localDate = new Date(
+    date.getTime() - offset * 60000
+  );
+
+  return localDate.toISOString().slice(0, 16);
+}
+
+
+function countdownParts(cutoffIso) {
+
+  const milliseconds =
+    new Date(cutoffIso).getTime() - Date.now();
+
+  if (milliseconds <= 0) {
+    return null;
+  }
+
+  const totalMinutes =
+    Math.floor(milliseconds / 60000);
+
+  return {
+    h: Math.floor(totalMinutes / 60),
+    m: totalMinutes % 60,
+    ms: milliseconds
+  };
+}
+
+
+/* =========================================================
+   MAIN TAB SWITCHING
+========================================================= */
+
+document.querySelectorAll('.tab-btn').forEach(button => {
+
+  button.addEventListener('click', () => {
 
     document
       .querySelectorAll('.tab-btn')
-      .forEach(b =>
-        b.classList.remove('active')
-      );
+      .forEach(btn => btn.classList.remove('active'));
 
     document
       .querySelectorAll('.view')
-      .forEach(v =>
-        v.classList.remove('active')
-      );
+      .forEach(view => view.classList.remove('active'));
 
-    btn.classList.add('active');
+    button.classList.add('active');
 
     document
-      .getElementById(
-        'view-' + btn.dataset.tab
-      )
+      .getElementById('view-' + button.dataset.tab)
       .classList.add('active');
 
-    if (btn.dataset.tab === 'buyer') {
+    if (button.dataset.tab === 'buyer') {
       loadFeed();
     }
 
@@ -1219,14 +1521,3582 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 
-document.querySelectorAll('.subtab-btn').forEach(btn => {
+/* =========================================================
+   SUB TAB SWITCHING
+========================================================= */
 
-  btn.addEventListener('click', () => {
+document.querySelectorAll('.subtab-btn').forEach(button => {
 
-    const parent =
-      btn.closest('.view');
+  button.addEventListener('click', () => {
+
+    const parent = button.closest('.view');
 
     parent
       .querySelectorAll('.subtab-btn')
-      .forEach(b =>
- 
+      .forEach(btn => btn.classList.remove('active'));
+
+    parent
+      .querySelectorAll('.subview')
+      .forEach(view => view.classList.remove('active'));
+
+    button.classList.add('active');
+
+    document
+      .getElementById('sub-' + button.dataset.sub)
+      .classList.add('active');
+
+  });
+
+});
+
+
+/* =========================================================
+   GEOCODING
+========================================================= */
+
+async function reverseGeocode(lat, lng) {
+
+  try {
+
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`
+    );
+
+    const data = await response.json();
+
+    return data.display_name ||
+      `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+  } catch (error) {
+
+    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+  }
+
+}
+
+
+async function forwardGeocode(address) {
+
+  try {
+
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
+    );
+
+    const data = await response.json();
+
+    if (data && data[0]) {
+
+      return {
+        lat: parseFloat(data[0].lat),
+        lng: parseFloat(data[0].lon)
+      };
+
+    }
+
+    return null;
+
+  } catch (error) {
+
+    return null;
+
+  }
+
+}
+
+
+/* =========================================================
+   BUYER LOCATION
+========================================================= */
+
+document
+  .getElementById('btn-locate')
+  .addEventListener('click', async () => {
+
+    const status =
+      document.getElementById('loc-status');
+
+    const button =
+      document.getElementById('btn-locate');
+
+    const address =
+      document.getElementById('buyer-address');
+
+
+    if (buyerLocOn) {
+
+      buyerLocOn = false;
+
+      buyerLat = null;
+      buyerLng = null;
+
+      button.textContent =
+        '📍 Use My Location';
+
+      button.classList.remove('active-on');
+
+      status.textContent =
+        'Location turned off — showing all meals.';
+
+      loadFeed();
+
+      return;
+    }
+
+
+    if (!navigator.geolocation) {
+
+      status.textContent =
+        "Your browser doesn't support location.";
+
+      return;
+
+    }
+
+
+    status.textContent =
+      'Getting your location…';
+
+
+    navigator.geolocation.getCurrentPosition(
+
+      async position => {
+
+        buyerLat =
+          position.coords.latitude;
+
+        buyerLng =
+          position.coords.longitude;
+
+        buyerLocOn = true;
+
+        button.textContent =
+          '📍 Located';
+
+        button.classList.add('active-on');
+
+        status.textContent =
+          'Looking up your address…';
+
+
+        const addr =
+          await reverseGeocode(
+            buyerLat,
+            buyerLng
+          );
+
+        address.value = addr;
+
+        status.textContent =
+          'Showing meals near you, nearest first.';
+
+        loadFeed();
+
+      },
+
+      () => {
+
+        status.textContent =
+          'Could not get your location. Check permissions and try again.';
+
+      }
+
+    );
+
+});
+
+
+/* =========================================================
+   BUYER ADDRESS SEARCH
+========================================================= */
+
+document
+  .getElementById('buyer-address')
+  .addEventListener('change', async () => {
+
+    const input =
+      document.getElementById('buyer-address');
+
+    const status =
+      document.getElementById('loc-status');
+
+    const value =
+      input.value.trim();
+
+    if (!value) return;
+
+    status.textContent =
+      'Finding that address…';
+
+
+    const coords =
+      await forwardGeocode(value);
+
+
+    if (coords) {
+
+      buyerLat = coords.lat;
+      buyerLng = coords.lng;
+      buyerLocOn = true;
+
+      const button =
+        document.getElementById('btn-locate');
+
+      button.textContent =
+        '📍 Located';
+
+      button.classList.add('active-on');
+
+      status.textContent =
+        'Showing meals near that address, nearest first.';
+
+      loadFeed();
+
+    } else {
+
+      status.textContent =
+        "Couldn't find that address. Try being more specific.";
+
+    }
+
+});
+
+
+document
+  .getElementById('radius-select')
+  .addEventListener('change', () => {
+
+    if (buyerLocOn) {
+      loadFeed();
+    }
+
+  });
+
+
+/* =========================================================
+   LOAD BUYER FEED
+========================================================= */
+
+async function loadFeed() {
+
+  const feed =
+    document.getElementById('buyer-feed');
+
+  feed.innerHTML =
+    '<p class="empty">Loading nearby meals…</p>';
+
+
+  try {
+
+    let url =
+      `${API_BASE}/api/slots`;
+
+
+    if (
+      buyerLocOn &&
+      buyerLat !== null &&
+      buyerLng !== null
+    ) {
+
+      const radius =
+        document.getElementById('radius-select').value;
+
+      url +=
+        `?lat=${buyerLat}&lng=${buyerLng}&radius=${radius}`;
+
+    }
+
+
+    const response =
+      await fetch(url);
+
+    if (!response.ok) {
+      throw new Error('Could not load meals');
+    }
+
+
+    const slots =
+      await response.json();
+
+
+    if (!Array.isArray(slots) || slots.length === 0) {
+
+      const message =
+        buyerLocOn
+          ? 'No meals within this radius yet. Try a wider distance.'
+          : "Check back soon — families nearby haven't listed today's cooking.";
+
+      feed.innerHTML = `
+        <div class="empty">
+          <p class="display">No meals found</p>
+          <p>${message}</p>
+        </div>
+      `;
+
+      return;
+    }
+
+
+    feed.innerHTML = '';
+
+    slotsById = {};
+
+
+    slots.forEach(slot => {
+
+      slotsById[slot._id] = slot;
+
+      feed.appendChild(
+        renderBuyerCard(slot)
+      );
+
+    });
+
+
+  } catch (error) {
+
+    feed.innerHTML = `
+      <div class="empty">
+        <p class="display">Couldn't load meals</p>
+        <p>Check your connection and try again.</p>
+      </div>
+    `;
+
+  }
+
+}
+
+
+/* =========================================================
+   BUYER MEAL CARD
+========================================================= */
+
+function renderBuyerCard(slot) {
+
+  const div =
+    document.createElement('div');
+
+  div.className = 'card';
+
+
+  const isOpen =
+    slot.status === 'open';
+
+
+  const portionsLeft =
+    Math.max(
+      0,
+      (slot.maxPortions || 0) -
+      (slot.ordersCount || 0)
+    );
+
+
+  const price =
+    slot.pricePerPortion || 0;
+
+
+  div.innerHTML = `
+
+    <div class="card-top">
+
+      <div>
+
+        <span class="meal-type">
+          ${escapeHtml(slot.mealType)}
+        </span>
+
+        <h3 class="seller-name">
+          ${escapeHtml(slot.sellerName)}
+        </h3>
+
+      </div>
+
+      <span class="${
+        isOpen
+          ? 'badge-open'
+          : 'badge-locked'
+      }">
+
+        ${
+          isOpen
+            ? 'Open'
+            : 'Locked'
+        }
+
+      </span>
+
+    </div>
+
+
+    <p class="items">
+      ${escapeHtml(slot.items)}
+    </p>
+
+
+    <div class="meta-row">
+
+      <span class="price-tag">
+        ₹${price} / portion
+      </span>
+
+      <span>
+        ${
+          portionsLeft > 0
+            ? portionsLeft + ' left'
+            : 'Sold out'
+        }
+      </span>
+
+    </div>
+
+
+    <div class="meta-row">
+
+      <span>
+        ${
+          slot.location
+            ? escapeHtml(slot.location) + ' · '
+            : ''
+        }
+
+        ${formatMealTime(slot.mealTime)}
+      </span>
+
+      ${
+        slot.distanceKm != null
+          ? `
+            <span class="distance-tag">
+              ${slot.distanceKm.toFixed(1)} km away
+            </span>
+          `
+          : ''
+      }
+
+    </div>
+
+
+    <div
+      class="cd-slot ${
+        isOpen ? '' : 'status-locked'
+      }"
+      data-cutoff="${slot.cutoffTime}"
+    ></div>
+
+
+    ${
+      isOpen && portionsLeft > 0
+
+      ? `
+
+        <div class="order-row">
+
+          <input
+            type="text"
+            placeholder="Your name"
+            id="buyer-name-${slot._id}"
+          >
+
+          <input
+            type="number"
+            placeholder="Qty"
+            min="1"
+            max="${portionsLeft}"
+            value="1"
+            id="buyer-qty-${slot._id}"
+            style="max-width:70px;"
+            oninput="updateOrderTotal('${slot._id}', ${price})"
+          >
+
+        </div>
+
+
+        <input
+          type="text"
+          placeholder="Your phone (for WhatsApp)"
+          id="buyer-phone-${slot._id}"
+          value="+91 "
+        >
+
+
+        <input
+          type="email"
+          placeholder="Your email (for order confirmation)"
+          id="buyer-email-${slot._id}"
+        >
+
+
+        <div
+          class="order-total"
+          id="order-total-${slot._id}"
+        >
+          Total:
+          <span>₹${price}</span>
+        </div>
+
+
+        ${
+          slot.upiId
+
+          ? `
+
+            <button
+              class="btn btn-upi"
+              onclick="startUpiPayment('${slot._id}')"
+            >
+              💳 Pay via UPI &amp; Order
+            </button>
+
+
+            <button
+              class="btn btn-primary"
+              id="confirm-order-${slot._id}"
+              style="display:none;"
+              onclick="placeOrder('${slot._id}', ${portionsLeft})"
+            >
+              ✅ I've Paid — Confirm Order
+            </button>
+
+          `
+
+          : `
+
+            <button
+              class="btn btn-primary"
+              onclick="placeOrder('${slot._id}', ${portionsLeft})"
+            >
+              Order Now
+            </button>
+
+          `
+        }
+
+      `
+
+      : `
+
+        <button
+          class="btn"
+          disabled
+        >
+          ${
+            portionsLeft <= 0
+              ? 'Sold Out'
+              : 'Ordering Closed'
+          }
+        </button>
+
+      `
+    }
+
+  `;
+
+
+  updateCountdownEl(
+    div.querySelector('.cd-slot'),
+    slot.cutoffTime,
+    isOpen
+  );
+
+
+  return div;
+
+}
+
+
+/* =========================================================
+   ORDER TOTAL
+========================================================= */
+
+function updateOrderTotal(slotId, price) {
+
+  const quantityInput =
+    document.getElementById(
+      `buyer-qty-${slotId}`
+    );
+
+  const total =
+    document.getElementById(
+      `order-total-${slotId}`
+    );
+
+
+  if (!quantityInput || !total) {
+    return;
+  }
+
+
+  const quantity =
+    parseInt(quantityInput.value) || 0;
+
+
+  total.innerHTML =
+    `Total: <span>₹${quantity * price}</span>`;
+
+}
+
+
+/* =========================================================
+   UPI
+========================================================= */
+
+function startUpiPayment(slotId) {
+
+  const slot =
+    slotsById[slotId];
+
+
+  if (!slot) {
+
+    showToast(
+      'Something went wrong — please refresh.'
+    );
+
+    return;
+
+  }
+
+
+  const buyerName =
+    document
+      .getElementById(`buyer-name-${slotId}`)
+      .value
+      .trim();
+
+
+  const quantity =
+    parseInt(
+      document
+        .getElementById(`buyer-qty-${slotId}`)
+        .value
+    );
+
+
+  const maxLeft =
+    slot.maxPortions -
+    slot.ordersCount;
+
+
+  if (!buyerName) {
+
+    showToast(
+      'Please enter your name'
+    );
+
+    return;
+
+  }
+
+
+  if (!quantity || quantity < 1) {
+
+    showToast(
+      'Please enter a valid quantity'
+    );
+
+    return;
+
+  }
+
+
+  if (quantity > maxLeft) {
+
+    showToast(
+      `Only ${maxLeft} portions left`
+    );
+
+    return;
+
+  }
+
+
+  const amount =
+    quantity *
+    (slot.pricePerPortion || 0);
+
+
+  const link =
+    `upi://pay?pa=${encodeURIComponent(slot.upiId)}` +
+    `&pn=${encodeURIComponent(slot.sellerName)}` +
+    `&am=${amount}` +
+    `&cu=INR` +
+    `&tn=FoodTime%20Order`;
+
+
+  window.location.href = link;
+
+
+  const confirmButton =
+    document.getElementById(
+      `confirm-order-${slotId}`
+    );
+
+
+  if (confirmButton) {
+    confirmButton.style.display = 'block';
+  }
+
+
+  showToast(
+    'Complete payment in your UPI app, then tap "I\'ve Paid".'
+  );
+
+}
+
+
+/* =========================================================
+   COUNTDOWN
+========================================================= */
+
+function updateCountdownEl(
+  element,
+  cutoffIso,
+  isOpen
+) {
+
+  if (!element) return;
+
+
+  const parts =
+    countdownParts(cutoffIso);
+
+
+  if (!isOpen || !parts) {
+
+    element.innerHTML = `
+
+      <div class="dial-wrap">
+
+        <div
+          class="dial"
+          style="--pct:0"
+        ></div>
+
+        <div class="countdown-text">
+
+          <div class="countdown-value mono">
+            Closed
+          </div>
+
+          <div class="countdown-label">
+            Ordering window has passed
+          </div>
+
+        </div>
+
+      </div>
+
+    `;
+
+    return;
+
+  }
+
+
+  const pct =
+    Math.max(
+      4,
+      Math.min(
+        100,
+        Math.round(
+          (
+            parts.ms /
+            (3 * 60 * 60 * 1000)
+          ) * 100
+        )
+      )
+    );
+
+
+  const timeString =
+    parts.h > 0
+      ? `${parts.h}h ${parts.m}m`
+      : `${parts.m}m`;
+
+
+  element.innerHTML = `
+
+    <div class="dial-wrap">
+
+      <div
+        class="dial"
+        style="--pct:${pct}"
+      ></div>
+
+      <div class="countdown-text">
+
+        <div class="countdown-value mono">
+          ${timeString}
+        </div>
+
+        <div class="countdown-label">
+          left to order
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+setInterval(() => {
+
+  document
+    .querySelectorAll('.cd-slot')
+    .forEach(element => {
+
+      const cutoff =
+        element.dataset.cutoff;
+
+      updateCountdownEl(
+        element,
+        cutoff,
+        new Date(cutoff) > new Date()
+      );
+
+    });
+
+}, 30000);
+
+
+setInterval(() => {
+
+  const buyerView =
+    document.getElementById('view-buyer');
+
+  if (
+    buyerView &&
+    buyerView.classList.contains('active')
+  ) {
+    loadFeed();
+  }
+
+}, 120000);
+
+
+/* =========================================================
+   PLACE ORDER
+========================================================= */
+
+async function placeOrder(
+  slotId,
+  maxLeft
+) {
+
+  const buyerName =
+    document
+      .getElementById(`buyer-name-${slotId}`)
+      .value
+      .trim();
+
+
+  const quantity =
+    parseInt(
+      document
+        .getElementById(`buyer-qty-${slotId}`)
+        .value
+    );
+
+
+  const buyerPhone =
+    document
+      .getElementById(`buyer-phone-${slotId}`)
+      .value
+      .trim();
+
+
+  const buyerEmail =
+    document
+      .getElementById(`buyer-email-${slotId}`)
+      .value
+      .trim();
+
+
+  if (!buyerName) {
+
+    showToast(
+      'Please enter your name'
+    );
+
+    return;
+
+  }
+
+
+  if (!quantity || quantity < 1) {
+
+    showToast(
+      'Please enter a valid quantity'
+    );
+
+    return;
+
+  }
+
+
+  if (quantity > maxLeft) {
+
+    showToast(
+      `Only ${maxLeft} portions left`
+    );
+
+    return;
+
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_BASE}/api/orders`,
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+
+          body: JSON.stringify({
+            slotId,
+            buyerName,
+            buyerPhone,
+            buyerEmail,
+            quantity
+          })
+
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      showToast(
+        data.error ||
+        'Could not place order'
+      );
+
+      return;
+
+    }
+
+
+    sendOrderEmails(
+      slotId,
+      buyerName,
+      buyerEmail,
+      quantity
+    );
+
+
+    showToast(
+      'Order placed! Waiting for seller acceptance.'
+    );
+
+
+    loadFeed();
+
+  } catch (error) {
+
+    showToast(
+      'Network error — please try again'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   EMAIL
+========================================================= */
+
+function sendOrderEmails(
+  slotId,
+  buyerName,
+  buyerEmail,
+  quantity
+) {
+
+  try {
+
+    if (
+      typeof emailjs === 'undefined'
+    ) {
+      return;
+    }
+
+
+    if (!window._emailjsInitDone) {
+
+      emailjs.init({
+        publicKey:
+          EMAILJS_PUBLIC_KEY
+      });
+
+      window._emailjsInitDone = true;
+
+    }
+
+
+    const slot =
+      slotsById[slotId];
+
+
+    if (!slot) return;
+
+
+    const total =
+      quantity *
+      (slot.pricePerPortion || 0);
+
+
+    const common = {
+
+      buyer_name:
+        buyerName,
+
+      items:
+        slot.items,
+
+      quantity:
+        quantity,
+
+      total:
+        total,
+
+      seller_name:
+        slot.sellerName
+
+    };
+
+
+    if (buyerEmail) {
+
+      emailjs
+        .send(
+          EMAILJS_SERVICE,
+          EMAILJS_BUYER_TEMPLATE,
+          {
+            ...common,
+            to_name:
+              buyerName,
+            email:
+              buyerEmail,
+            order_id:
+              slotId
+          }
+        )
+        .catch(() => {});
+
+    }
+
+
+    if (slot.sellerEmail) {
+
+      emailjs
+        .send(
+          EMAILJS_SERVICE,
+          EMAILJS_SELLER_TEMPLATE,
+          {
+            ...common,
+            to_name:
+              slot.sellerName,
+            email:
+              slot.sellerEmail,
+            order_id:
+              slotId
+          }
+        )
+        .catch(() => {});
+
+    }
+
+  } catch (error) {
+
+    // Email failure must never stop an order.
+
+  }
+
+}
+
+
+/* =========================================================
+   BUYER MY ORDERS
+========================================================= */
+
+document
+  .getElementById('btn-load-myorders')
+  .addEventListener('click', loadMyOrders);
+
+
+async function loadMyOrders() {
+
+  const name =
+    document
+      .getElementById('mo-name')
+      .value
+      .trim();
+
+
+  const container =
+    document.getElementById(
+      'my-orders-list'
+    );
+
+
+  if (!name) {
+
+    showToast(
+      'Enter your name first'
+    );
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    '<p class="empty">Loading…</p>';
+
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_BASE}/api/orders/buyer/${encodeURIComponent(name)}`
+      );
+
+
+    const orders =
+      await response.json();
+
+
+    if (!Array.isArray(orders) || !orders.length) {
+
+      container.innerHTML = `
+
+        <div class="empty">
+
+          <p class="display">
+            No orders yet
+          </p>
+
+          <p>
+            Orders you place will show up here.
+          </p>
+
+        </div>
+
+      `;
+
+      return;
+
+    }
+
+
+    container.innerHTML = '';
+
+
+    orders.forEach(order => {
+
+      if (!order.slot) return;
+
+
+      const slot =
+        order.slot;
+
+
+      const total =
+        (slot.pricePerPortion || 0) *
+        order.quantity;
+
+
+      let statusLabel =
+        'Pending Acceptance';
+
+
+      let badgeClass =
+        'badge-pending';
+
+
+      if (order.status === 'accepted') {
+
+        statusLabel =
+          'Accepted';
+
+        badgeClass =
+          'badge-accepted';
+
+      }
+
+
+      if (order.status === 'rejected') {
+
+        statusLabel =
+          'Rejected';
+
+        badgeClass =
+          'badge-rejected';
+
+      }
+
+
+      if (
+        order.status ===
+        'cancelled_by_buyer'
+      ) {
+
+        statusLabel =
+          'Cancelled by you';
+
+        badgeClass =
+          'badge-cancelled';
+
+      }
+
+
+      if (
+        order.status ===
+        'cancelled_by_seller'
+      ) {
+
+        statusLabel =
+          'Cancelled by seller';
+
+        badgeClass =
+          'badge-cancelled';
+
+      }
+
+
+      const canCancel =
+        slot.canCancel &&
+        (
+          order.status === 'pending' ||
+          order.status === 'accepted'
+        );
+
+
+      const div =
+        document.createElement('div');
+
+
+      div.className =
+        'card';
+
+
+      div.innerHTML = `
+
+        <div class="card-top">
+
+          <div>
+
+            <span class="meal-type">
+              ${escapeHtml(slot.mealType)}
+            </span>
+
+            <h3 class="seller-name">
+              ${escapeHtml(slot.sellerName)}
+            </h3>
+
+          </div>
+
+          <span class="${badgeClass}">
+            ${statusLabel}
+          </span>
+
+        </div>
+
+
+        <p class="items">
+          ${escapeHtml(slot.items)}
+        </p>
+
+
+        <div class="meta-row">
+
+          <span>
+            Qty: ${order.quantity}
+          </span>
+
+          <span class="price-tag">
+            ₹${total}
+          </span>
+
+        </div>
+
+
+        <div class="meta-row">
+
+          <span>
+            ${formatMealTime(slot.mealTime)}
+          </span>
+
+          <span>
+            Cutoff:
+            ${formatMealTime(slot.cutoffTime)}
+          </span>
+
+        </div>
+
+
+        ${
+          order.status === 'rejected'
+            && order.cancelReason
+
+          ? `
+
+            <div class="order-detail-row">
+
+              <span>
+                Rejection reason
+              </span>
+
+              <span style="color:var(--sindoor);font-weight:700;">
+                ${escapeHtml(order.cancelReason)}
+              </span>
+
+            </div>
+
+          `
+          : ''
+        }
+
+
+        ${
+          order.status === 'cancelled_by_seller'
+            && order.cancelReason
+
+          ? `
+
+            <div class="order-detail-row">
+
+              <span>
+                Seller's reason
+              </span>
+
+              <span style="color:var(--sindoor);font-weight:700;">
+                ${escapeHtml(order.cancelReason)}
+              </span>
+
+            </div>
+
+          `
+          : ''
+        }
+
+
+        ${
+          canCancel
+
+          ? `
+
+            <button
+              class="btn btn-danger"
+              onclick="cancelOrder('${order._id}')"
+            >
+              Cancel Order
+            </button>
+
+          `
+          : ''
+        }
+
+
+        ${
+          slot.sellerPhone
+
+          ? `
+
+            <div class="section-label">
+              Seller Contact
+            </div>
+
+            <div class="order-detail-row">
+
+              <span>
+                📞 ${escapeHtml(slot.sellerPhone)}
+              </span>
+
+              <a
+                href="https://wa.me/${escapeHtml(slot.sellerPhone).replace(/[^0-9]/g,'')}"
+                target="_blank"
+                style="color:var(--leaf-deep);font-weight:700;font-size:12.5px;"
+              >
+                Open WhatsApp
+              </a>
+
+            </div>
+
+          `
+          : ''
+        }
+
+      `;
+
+
+      container.appendChild(div);
+
+    });
+
+
+  } catch (error) {
+
+    container.innerHTML = `
+
+      <div class="empty">
+
+        <p>
+          Couldn't load your orders.
+          Try again.
+        </p>
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/* =========================================================
+   BUYER CANCEL ORDER
+========================================================= */
+
+async function cancelOrder(orderId) {
+
+  const confirmed =
+    confirm(
+      'Cancel this order? Refund eligibility depends on how long ago you ordered.'
+    );
+
+
+  if (!confirmed) return;
+
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_BASE}/api/orders/${orderId}`,
+        {
+          method: 'DELETE'
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      showToast(
+        data.error ||
+        'Could not cancel order'
+      );
+
+      return;
+
+    }
+
+
+    let message;
+
+
+    if (
+      data.refundPolicy === 'full'
+    ) {
+
+      message =
+        'Order cancelled — full refund applies. Contact the seller to arrange it.';
+
+    } else if (
+      data.refundPolicy === 'half'
+    ) {
+
+      message =
+        'Order cancelled — 50% refund applies. Contact the seller to arrange it.';
+
+    } else {
+
+      message =
+        'Order cancelled — no refund applies as per policy.';
+
+    }
+
+
+    showToast(message);
+
+    loadMyOrders();
+
+  } catch (error) {
+
+    showToast(
+      'Network error — please try again'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   SELLER LOCATION
+========================================================= */
+
+document
+  .getElementById('btn-share-location')
+  .addEventListener('click', async () => {
+
+    const status =
+      document.getElementById(
+        'share-loc-status'
+      );
+
+    const button =
+      document.getElementById(
+        'btn-share-location'
+      );
+
+    const address =
+      document.getElementById(
+        's-location'
+      );
+
+
+    if (sellerLocOn) {
+
+      sellerLocOn = false;
+
+      sellerLat = null;
+      sellerLng = null;
+
+      button.textContent =
+        '📍 Use My Location';
+
+      button.classList.remove(
+        'active-on'
+      );
+
+      status.textContent =
+        'Location turned off.';
+
+      return;
+
+    }
+
+
+    if (!navigator.geolocation) {
+
+      status.textContent =
+        'Location not supported on this browser.';
+
+      return;
+
+    }
+
+
+    status.textContent =
+      'Getting location…';
+
+
+    navigator.geolocation.getCurrentPosition(
+
+      async position => {
+
+        sellerLat =
+          position.coords.latitude;
+
+        sellerLng =
+          position.coords.longitude;
+
+        sellerLocOn = true;
+
+        button.textContent =
+          '📍 Located';
+
+        button.classList.add(
+          'active-on'
+        );
+
+        status.textContent =
+          'Looking up address…';
+
+
+        const addr =
+          await reverseGeocode(
+            sellerLat,
+            sellerLng
+          );
+
+
+        address.value =
+          addr;
+
+
+        status.textContent =
+          'Location pinned ✓';
+
+      },
+
+      () => {
+
+        status.textContent =
+          'Could not get location. Check permissions.';
+
+      }
+
+    );
+
+});
+
+
+document
+  .getElementById('s-location')
+  .addEventListener('change', async () => {
+
+    if (sellerLocOn) return;
+
+
+    const value =
+      document
+        .getElementById('s-location')
+        .value
+        .trim();
+
+
+    if (!value) return;
+
+
+    const coords =
+      await forwardGeocode(value);
+
+
+    if (coords) {
+
+      sellerLat =
+        coords.lat;
+
+      sellerLng =
+        coords.lng;
+
+
+      document
+        .getElementById(
+          'share-loc-status'
+        )
+        .textContent =
+          'Address pinned ✓';
+
+    }
+
+});
+
+
+/* =========================================================
+   PUBLISH MENU
+========================================================= */
+
+document
+  .getElementById('btn-post')
+  .addEventListener('click', publishMenu);
+
+
+async function publishMenu() {
+
+  const sellerName =
+    document
+      .getElementById('s-name')
+      .value
+      .trim();
+
+
+  const mealType =
+    document
+      .getElementById('s-mealtype')
+      .value;
+
+
+  const mealTime =
+    document
+      .getElementById('s-mealtime')
+      .value;
+
+
+  const items =
+    document
+      .getElementById('s-items')
+      .value
+      .trim();
+
+
+  const pricePerPortion =
+    parseInt(
+      document
+        .getElementById('s-price')
+        .value
+    );
+
+
+  const maxPortions =
+    parseInt(
+      document
+        .getElementById('s-portions')
+        .value
+    );
+
+
+  const location =
+    document
+      .getElementById('s-location')
+      .value
+      .trim();
+
+
+  const upiId =
+    document
+      .getElementById('s-upi')
+      .value
+      .trim();
+
+
+  const sellerPhone =
+    document
+      .getElementById('s-phone')
+      .value
+      .trim();
+
+
+  const sellerEmail =
+    document
+      .getElementById('s-email')
+      .value
+      .trim();
+
+
+  if (
+    !sellerName ||
+    !mealTime ||
+    !items ||
+    !maxPortions ||
+    !pricePerPortion
+  ) {
+
+    showToast(
+      'Please fill in all required fields, including price'
+    );
+
+    return;
+
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_BASE}/api/slots`,
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+
+          body: JSON.stringify({
+
+            sellerName,
+            mealType,
+            mealTime,
+            items,
+            maxPortions,
+            pricePerPortion,
+            location,
+            latitude: sellerLat,
+            longitude: sellerLng,
+            upiId,
+            sellerPhone,
+            sellerEmail
+
+          })
+
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      showToast(
+        data.error ||
+        'Could not publish menu'
+      );
+
+      return;
+
+    }
+
+
+    showToast(
+      'Menu published!'
+    );
+
+
+    document
+      .getElementById('s-items')
+      .value = '';
+
+
+    document
+      .getElementById('s-portions')
+      .value = '';
+
+
+    document
+      .getElementById('s-price')
+      .value = '';
+
+
+  } catch (error) {
+
+    showToast(
+      'Network error — please try again'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   SELLER ORDER QUEUE
+========================================================= */
+
+document
+  .getElementById('btn-refresh-orders')
+  .addEventListener('click', async () => {
+
+    const name =
+      document
+        .getElementById('o-name')
+        .value
+        .trim();
+
+
+    if (!name) {
+
+      showToast(
+        'Enter your seller name first'
+      );
+
+      return;
+
+    }
+
+
+    await Promise.all([
+      loadSellerQueue(name),
+      loadSellerSlots(name)
+    ]);
+
+  });
+
+
+async function loadSellerQueue(
+  sellerName
+) {
+
+  const container =
+    document.getElementById(
+      'seller-queue'
+    );
+
+
+  container.innerHTML =
+    '<p class="empty">Loading queue…</p>';
+
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_BASE}/api/orders/seller/${encodeURIComponent(sellerName)}`
+      );
+
+
+    const orders =
+      await response.json();
+
+
+    if (
+      !Array.isArray(orders) ||
+      !orders.length
+    ) {
+
+      container.innerHTML = `
+
+        <div class="empty">
+
+          <p class="display">
+            No orders yet
+          </p>
+
+          <p>
+            Orders from buyers will show up here.
+          </p>
+
+        </div>
+
+      `;
+
+      return;
+
+    }
+
+
+    container.innerHTML = '';
+
+
+    orders.forEach(order => {
+
+      if (order.slot) {
+
+        container.appendChild(
+          renderQueueCard(
+            order,
+            sellerName
+          )
+        );
+
+      }
+
+    });
+
+
+  } catch (error) {
+
+    container.innerHTML = `
+
+      <div class="empty">
+
+        <p>
+          Couldn't load your order queue.
+        </p>
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/* =========================================================
+   SELLER ORDER CARD
+========================================================= */
+
+function renderQueueCard(
+  order,
+  sellerName
+) {
+
+  const div =
+    document.createElement('div');
+
+  div.className =
+    'card';
+
+
+  const slot =
+    order.slot;
+
+
+  const total =
+    (slot.pricePerPortion || 0) *
+    order.quantity;
+
+
+  let statusLabel =
+    'Pending Acceptance';
+
+
+  let badgeClass =
+    'badge-pending';
+
+
+  if (order.status === 'accepted') {
+
+    statusLabel =
+      'Accepted';
+
+    badgeClass =
+      'badge-accepted';
+
+  }
+
+
+  if (order.status === 'rejected') {
+
+    statusLabel =
+      'Rejected';
+
+    badgeClass =
+      'badge-rejected';
+
+  }
+
+
+  if (
+    order.status ===
+    'cancelled_by_buyer'
+  ) {
+
+    statusLabel =
+      'Cancelled by buyer';
+
+    badgeClass =
+      'badge-cancelled';
+
+  }
+
+
+  if (
+    order.status ===
+    'cancelled_by_seller'
+  ) {
+
+    statusLabel =
+      'Cancelled by seller';
+
+    badgeClass =
+      'badge-cancelled';
+
+  }
+
+
+  const isPending =
+    order.status === 'pending';
+
+
+  const isAccepted =
+    order.status === 'accepted';
+
+
+  const isActive =
+    isPending ||
+    isAccepted;
+
+
+  div.innerHTML = `
+
+    <div class="card-top">
+
+      <div>
+
+        <span class="meal-type">
+          ${escapeHtml(slot.mealType)}
+        </span>
+
+        <h3 class="seller-name">
+          ${escapeHtml(order.buyerName)}
+        </h3>
+
+      </div>
+
+      <span class="${badgeClass}">
+        ${statusLabel}
+      </span>
+
+    </div>
+
+
+    <p class="items">
+      ${escapeHtml(slot.items)}
+    </p>
+
+
+    <div class="meta-row">
+
+      <span>
+        ${formatMealTime(slot.mealTime)}
+      </span>
+
+      <span>
+        Cutoff:
+        ${formatMealTime(slot.cutoffTime)}
+      </span>
+
+    </div>
+
+
+    <div class="meta-row">
+
+      <span class="mono">
+        ${order.quantity} portion(s)
+      </span>
+
+      <span class="price-tag">
+        ₹${total}
+      </span>
+
+    </div>
+
+
+    ${
+      order.buyerPhone
+
+      ? `
+
+        <div class="meta-row">
+
+          <span>
+            📞 ${escapeHtml(order.buyerPhone)}
+          </span>
+
+          <a
+            href="https://wa.me/${escapeHtml(order.buyerPhone).replace(/[^0-9]/g,'')}"
+            target="_blank"
+            style="color:var(--leaf-deep);font-weight:700;font-size:12.5px;"
+          >
+            Open WhatsApp
+          </a>
+
+        </div>
+
+      `
+      : ''
+    }
+
+
+    ${
+      order.cancelReason
+
+      ? `
+
+        <div class="order-detail-row">
+
+          <span>
+            Reason
+          </span>
+
+          <span style="color:var(--sindoor);font-weight:700;">
+            ${escapeHtml(order.cancelReason)}
+          </span>
+
+        </div>
+
+      `
+      : ''
+    }
+
+
+    ${
+      isPending
+
+      ? `
+
+        <div class="seller-action-box">
+
+          <div class="seller-action-title">
+            Action required
+          </div>
+
+          <div class="accept-reject-row">
+
+            <button
+              class="btn btn-success"
+              onclick="acceptOrder('${order._id}','${encodeURIComponent(sellerName)}')"
+            >
+              ✓ Accept Order
+            </button>
+
+            <button
+              class="btn btn-danger"
+              onclick="openRejectModal('${order._id}','${encodeURIComponent(sellerName)}')"
+            >
+              ✕ Reject Order
+            </button>
+
+          </div>
+
+        </div>
+
+      `
+      : ''
+    }
+
+
+    ${
+      isActive
+
+      ? `
+
+        <div class="seller-action-box">
+
+          <div class="seller-action-title">
+            Quantity
+          </div>
+
+          <div class="order-row">
+
+            <input
+              type="number"
+              min="${order.quantity}"
+              value="${order.quantity}"
+              id="edit-qty-${order._id}"
+            >
+
+            <button
+              class="btn btn-secondary"
+              style="width:auto;margin-top:0;padding:0 16px;"
+              onclick="editOrderQty('${order._id}','${encodeURIComponent(sellerName)}')"
+            >
+              Update
+            </button>
+
+          </div>
+
+          ${
+            isAccepted
+
+            ? `
+
+              <div class="edit-note">
+                Because this order is already accepted,
+                the quantity can only be increased.
+              </div>
+
+            `
+            : `
+
+              <div class="edit-note">
+                You can adjust the buyer's requested quantity
+                while the order is still pending.
+              </div>
+
+            `
+          }
+
+        </div>
+
+
+        <div class="btn-row">
+
+          <button
+            class="btn btn-danger"
+            onclick="sellerCancelOrder('${order._id}','${encodeURIComponent(sellerName)}')"
+          >
+            Cancel Order
+          </button>
+
+        </div>
+
+      `
+      : ''
+    }
+
+  `;
+
+
+  return div;
+
+}
+
+
+/* =========================================================
+   ACCEPT ORDER
+========================================================= */
+
+async function acceptOrder(
+  orderId,
+  sellerNameEncoded
+) {
+
+  const sellerName =
+    decodeURIComponent(
+      sellerNameEncoded
+    );
+
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_BASE}/api/orders/${orderId}/accept`,
+        {
+          method: 'PATCH'
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      showToast(
+        data.error ||
+        'Could not accept order'
+      );
+
+      return;
+
+    }
+
+
+    showToast(
+      'Order accepted.'
+    );
+
+
+    loadSellerQueue(
+      sellerName
+    );
+
+
+    loadSellerSlots(
+      sellerName
+    );
+
+
+  } catch (error) {
+
+    showToast(
+      'Network error — please try again'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   REJECT MODAL
+========================================================= */
+
+function openRejectModal(
+  orderId,
+  sellerNameEncoded
+) {
+
+  currentRejectOrderId =
+    orderId;
+
+  currentRejectSellerName =
+    sellerNameEncoded;
+
+
+  document
+    .getElementById(
+      'reject-reason-input'
+    )
+    .value = '';
+
+
+  document
+    .getElementById(
+      'reject-modal'
+    )
+    .classList.add('show');
+
+}
+
+
+document
+  .getElementById(
+    'cancel-reject-btn'
+  )
+  .addEventListener(
+    'click',
+    () => {
+
+      document
+        .getElementById(
+          'reject-modal'
+        )
+        .classList.remove('show');
+
+      currentRejectOrderId =
+        null;
+
+    }
+  );
+
+
+document
+  .getElementById(
+    'confirm-reject-btn'
+  )
+  .addEventListener(
+    'click',
+    rejectOrder
+  );
+
+
+async function rejectOrder() {
+
+  if (!currentRejectOrderId) {
+    return;
+  }
+
+
+  const reason =
+    document
+      .getElementById(
+        'reject-reason-input'
+      )
+      .value
+      .trim();
+
+
+  if (!reason) {
+
+    showToast(
+      'A reason is required to reject an order.'
+    );
+
+    return;
+
+  }
+
+
+  const orderId =
+    currentRejectOrderId;
+
+
+  const sellerName =
+    decodeURIComponent(
+      currentRejectSellerName
+    );
+
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_BASE}/api/orders/${orderId}/reject`,
+        {
+          method: 'PATCH',
+
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+
+          body: JSON.stringify({
+            reason
+          })
+
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      showToast(
+        data.error ||
+        'Could not reject order'
+      );
+
+      return;
+
+    }
+
+
+    document
+      .getElementById(
+        'reject-modal'
+      )
+      .classList.remove('show');
+
+
+    currentRejectOrderId =
+      null;
+
+
+    showToast(
+      'Order rejected. Buyer has been notified.'
+    );
+
+
+    loadSellerQueue(
+      sellerName
+    );
+
+
+    loadSellerSlots(
+      sellerName
+    );
+
+
+  } catch (error) {
+
+    showToast(
+      'Network error — please try again'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   SELLER CANCEL ORDER
+========================================================= */
+
+async function sellerCancelOrder(
+  orderId,
+  sellerNameEncoded
+) {
+
+  const reason =
+    prompt(
+      'Please provide a reason for cancelling this order. The buyer will see this.'
+    );
+
+
+  if (reason === null) {
+    return;
+  }
+
+
+  if (!reason.trim()) {
+
+    showToast(
+      'A reason is required to cancel an order.'
+    );
+
+    return;
+
+  }
+
+
+  const sellerName =
+    decodeURIComponent(
+      sellerNameEncoded
+    );
+
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_BASE}/api/orders/${orderId}/seller-cancel`,
+        {
+          method: 'PATCH',
+
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+
+          body: JSON.stringify({
+            reason:
+              reason.trim()
+          })
+
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      showToast(
+        data.error ||
+        'Could not cancel order'
+      );
+
+      return;
+
+    }
+
+
+    showToast(
+      'Order cancelled.'
+    );
+
+
+    loadSellerQueue(
+      sellerName
+    );
+
+
+    loadSellerSlots(
+      sellerName
+    );
+
+
+  } catch (error) {
+
+    showToast(
+      'Network error — please try again'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   SELLER ORDER QUANTITY EDIT
+========================================================= */
+
+async function editOrderQty(
+  orderId,
+  sellerNameEncoded
+) {
+
+  const input =
+    document.getElementById(
+      `edit-qty-${orderId}`
+    );
+
+
+  if (!input) return;
+
+
+  const quantity =
+    parseInt(input.value);
+
+
+  if (!quantity || quantity < 1) {
+
+    showToast(
+      'Enter a valid quantity'
+    );
+
+    return;
+
+  }
+
+
+  const sellerName =
+    decodeURIComponent(
+      sellerNameEncoded
+    );
+
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_BASE}/api/orders/${orderId}`,
+        {
+          method: 'PATCH',
+
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+
+          body: JSON.stringify({
+            quantity
+          })
+
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      showToast(
+        data.error ||
+        'Could not update quantity'
+      );
+
+      return;
+
+    }
+
+
+    showToast(
+      'Quantity updated.'
+    );
+
+
+    loadSellerQueue(
+      sellerName
+    );
+
+
+    loadSellerSlots(
+      sellerName
+    );
+
+
+  } catch (error) {
+
+    showToast(
+      'Network error — please try again'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   SELLER MENUS
+========================================================= */
+
+async function loadSellerSlots(
+  sellerName
+) {
+
+  const container =
+    document.getElementById(
+      'seller-slots'
+    );
+
+
+  container.innerHTML =
+    '<p class="empty">Loading…</p>';
+
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_BASE}/api/slots/seller/${encodeURIComponent(sellerName)}`
+      );
+
+
+    const slots =
+      await response.json();
+
+
+    if (
+      !Array.isArray(slots) ||
+      !slots.length
+    ) {
+
+      container.innerHTML = `
+
+        <div class="empty">
+
+          <p class="display">
+            No menus yet
+          </p>
+
+          <p>
+            Post your first menu to see it here.
+          </p>
+
+        </div>
+
+      `;
+
+      return;
+
+    }
+
+
+    container.innerHTML = '';
+
+
+    slots.forEach(slot => {
+
+      container.appendChild(
+        renderSellerSlotCard(
+          slot,
+          sellerName
+        )
+      );
+
+    });
+
+
+  } catch (error) {
+
+    container.innerHTML = `
+
+      <div class="empty">
+
+        <p>
+          Couldn't load your menus.
+          Try again.
+        </p>
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/* =========================================================
+   SELLER MENU CARD
+========================================================= */
+
+function renderSellerSlotCard(
+  slot,
+  sellerName
+) {
+
+  const div =
+    document.createElement('div');
+
+  div.className =
+    'card';
+
+
+  const isBeforeCutoff =
+    new Date(slot.cutoffTime) >
+    new Date();
+
+
+  const ordersCount =
+    slot.ordersCount || 0;
+
+
+  const maxPortions =
+    slot.maxPortions || 0;
+
+
+  const hasAcceptedOrders =
+    slot.hasAcceptedOrders === true;
+
+
+  const canFullyEdit =
+    !hasAcceptedOrders;
+
+
+  const revenue =
+    (slot.pricePerPortion || 0) *
+    ordersCount;
+
+
+  div.innerHTML = `
+
+    <div class="card-top">
+
+      <div>
+
+        <span class="meal-type">
+          ${escapeHtml(slot.mealType)}
+        </span>
+
+        <h3 class="seller-name">
+          ${formatMealTime(slot.mealTime)}
+        </h3>
+
+      </div>
+
+      <span class="${
+        isBeforeCutoff
+          ? 'badge-open'
+          : 'badge-locked'
+      }">
+
+        ${
+          isBeforeCutoff
+            ? 'Taking orders'
+            : 'Locked'
+        }
+
+      </span>
+
+    </div>
+
+
+    <p class="items">
+      ${escapeHtml(slot.items)}
+    </p>
+
+
+    <div class="meta-row">
+
+      <span class="price-tag">
+        ₹${slot.pricePerPortion || 0} / portion
+      </span>
+
+      <span>
+        Cutoff:
+        ${formatMealTime(slot.cutoffTime)}
+      </span>
+
+    </div>
+
+
+    <div class="meta-row">
+
+      <span class="mono">
+        ${ordersCount} / ${maxPortions} ordered
+      </span>
+
+      <span class="price-tag">
+        ₹${revenue} so far
+      </span>
+
+    </div>
+
+
+    ${
+      canFullyEdit
+
+      ? `
+
+        <button
+          class="btn btn-secondary"
+          onclick="openMenuEditModal('${slot._id}','${encodeURIComponent(sellerName)}')"
+        >
+          ✎ Edit Menu
+        </button>
+
+      `
+
+      : `
+
+        <div class="menu-edit-box">
+
+          <h4>
+            Menu editing is restricted
+          </h4>
+
+          <div class="edit-note">
+            This menu has an accepted order.
+            You can no longer change the meal,
+            price, or existing details.
+            You may only increase available portions
+            and extend the meal time.
+          </div>
+
+          <button
+            class="btn btn-warning"
+            onclick="openMenuEditModal('${slot._id}','${encodeURIComponent(sellerName)}')"
+          >
+            ⚙ Increase Portions / Extend Time
+          </button>
+
+        </div>
+
+      `
+
+    }
+
+  `;
+
+
+  return div;
+
+}
+
+
+/* =========================================================
+   OPEN MENU EDIT MODAL
+========================================================= */
+
+async function openMenuEditModal(
+  slotId,
+  sellerNameEncoded
+) {
+
+  const slot =
+    await getSlotById(slotId);
+
+
+  if (!slot) {
+
+    showToast(
+      'Could not load menu.'
+    );
+
+    return;
+
+  }
+
+
+  currentEditSlotId =
+    slotId;
+
+
+  currentEditSellerName =
+    sellerNameEncoded;
+
+
+  const hasAcceptedOrders =
+    slot.hasAcceptedOrders === true;
+
+
+  document
+    .getElementById(
+      'edit-mealtype'
+    )
+    .value =
+      slot.mealType || 'lunch';
+
+
+  document
+    .getElementById(
+      'edit-mealtime'
+    )
+    .value =
+      toDateTimeLocalValue(
+        slot.mealTime
+      );
+
+
+  document
+    .getElementById(
+      'edit-items'
+    )
+    .value =
+      slot.items || '';
+
+
+  document
+    .getElementById(
+      'edit-price'
+    )
+    .value =
+      slot.pricePerPortion || '';
+
+
+  document
+    .getElementById(
+      'edit-portions'
+    )
+    .value =
+      slot.maxPortions || '';
+
+
+  document
+    .getElementById(
+      'edit-location'
+    )
+    .value =
+      slot.location || '';
+
+
+  const note =
+    document.getElementById(
+      'edit-menu-note'
+    );
+
+
+  const mealType =
+    document.getElementById(
+      'edit-mealtype'
+    );
+
+
+  const mealTime =
+    document.getElementById(
+      'edit-mealtime'
+    );
+
+
+  const items =
+    document.getElementById(
+      'edit-items'
+    );
+
+
+  const price =
+    document.getElementById(
+      'edit-price'
+    );
+
+
+  const portions =
+    document.getElementById(
+      'edit-portions'
+    );
+
+
+  const location =
+    document.getElementById(
+      'edit-location'
+    );
+
+
+  if (hasAcceptedOrders) {
+
+    note.textContent =
+      'An accepted order exists. You may only increase portions and extend the meal time.';
+
+
+    mealType.disabled =
+      true;
+
+    items.disabled =
+      true;
+
+    price.disabled =
+      true;
+
+    location.disabled =
+      true;
+
+
+    portions.min =
+      slot.maxPortions;
+
+    mealTime.min =
+      toDateTimeLocalValue(
+        slot.mealTime
+      );
+
+
+  } else {
+
+    note.textContent =
+      'No accepted order exists yet. You can change the menu details.';
+
+
+    mealType.disabled =
+      false;
+
+    items.disabled =
+      false;
+
+    price.disabled =
+      false;
+
+    location.disabled =
+      false;
+
+
+    portions.min =
+      '1';
+
+    mealTime.min =
+      '';
+
+  }
+
+
+  document
+    .getElementById(
+      'edit-menu-modal'
+    )
+    .classList.add('show');
+
+}
+
+
+/* =========================================================
+   GET SINGLE SLOT
+========================================================= */
+
+async function getSlotById(
+  slotId
+) {
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_BASE}/api/slots/${slotId}`
+      );
+
+
+    if (!response.ok) {
+
+      /*
+       * Fallback to the local cached copy
+       * if the older server doesn't yet have
+       * the single-slot endpoint.
+       */
+
+      return slotsById[slotId] || null;
+
+    }
+
+
+    return await response.json();
+
+  } catch (error) {
+
+    return slotsById[slotId] || null;
+
+  }
+
+}
+
+
+/* =========================================================
+   CLOSE MENU EDIT MODAL
+========================================================= */
+
+document
+  .getElementById(
+    'cancel-menu-edit-btn'
+  )
+  .addEventListener(
+    'click',
+    closeMenuEditModal
+  );
+
+
+function closeMenuEditModal() {
+
+  document
+    .getElementById(
+      'edit-menu-modal'
+    )
+    .classList.remove('show');
+
+
+  currentEditSlotId =
+    null;
+
+}
+
+
+/* =========================================================
+   SAVE MENU EDIT
+========================================================= */
+
+document
+  .getElementById(
+    'save-menu-edit-btn'
+  )
+  .addEventListener(
+    'click',
+    saveMenuEdit
+  );
+
+
+async function saveMenuEdit() {
+
+  if (!currentEditSlotId) {
+
+    showToast(
+      'No menu selected.'
+    );
+
+    return;
+
+  }
+
+
+  const slot =
+    await getSlotById(
+      currentEditSlotId
+    );
+
+
+  if (!slot) {
+
+    showToast(
+      'Could not load menu.'
+    );
+
+    return;
+
+  }
+
+
+  const hasAcceptedOrders =
+    slot.hasAcceptedOrders === true;
+
+
+  const mealType =
+    document
+      .getElementById(
+        'edit-mealtype'
+      )
+      .value;
+
+
+  const mealTime =
+    document
+      .getElementById(
+        'edit-mealtime'
+      )
+      .value;
+
+
+  const items =
+    document
+      .getElementById(
+        'edit-items'
+      )
+      .value
+      .trim();
+
+
+  const pricePerPortion =
+    parseInt(
+      document
+        .getElementById(
+          'edit-price'
+        )
+        .value
+    );
+
+
+  const maxPortions =
+    parseInt(
+      document
+        .getElementById(
+          'edit-portions'
+        )
+        .value
+    );
+
+
+  const location =
+    document
+      .getElementById(
+        'edit-location'
+      )
+      .value
+      .trim();
+
+
+  if (!mealTime) {
+
+    showToast(
+      'Meal time is required.'
+    );
+
+    return;
+
+  }
+
+
+  if (!maxPortions || maxPortions < 1) {
+
+    showToast(
+      'Enter a valid number of portions.'
+    );
+
+    return;
+
+  }
+
+
+  if (!hasAcceptedOrders) {
+
+    if (!items) {
+
+      showToast(
+        'Menu items cannot be empty.'
+      );
+
+      return;
+
+    }
+
+
+    if (!pricePerPortion || pricePerPortion < 1) {
+
+      showToast(
+        'Enter a valid price.'
+      );
+
+      return;
+
+    }
+
+  }
+
+
+  if (
+    hasAcceptedOrders &&
+    maxPortions < slot.maxPortions
+  ) {
+
+    showToast(
+      'After acceptance, available portions can only be increased.'
+    );
+
+    return;
+
+  }
+
+
+  if (
+    hasAcceptedOrders &&
+    new Date(mealTime) < new Date(slot.mealTime)
+  ) {
+
+    showToast(
+      'After acceptance, meal time can only be extended.'
+    );
+
+    return;
+
+  }
+
+
+  const updateData = {};
+
+
+  if (!hasAcceptedOrders) {
+
+    updateData.mealType =
+      mealType;
+
+    updateData.mealTime =
+      mealTime;
+
+    updateData.items =
+      items;
+
+    updateData.pricePerPortion =
+      pricePerPortion;
+
+    updateData.maxPortions =
+      maxPortions;
+
+    updateData.location =
+      location;
+
+  } else {
+
+    updateData.maxPortions =
+      maxPortions;
+
+    updateData.mealTime =
+      mealTime;
+
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_BASE}/api/slots/${currentEditSlotId}`,
+        {
+          method: 'PATCH',
+
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+
+          body: JSON.stringify(
+            updateData
+          )
+
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      showToast(
+        data.error ||
+        'Could not update menu.'
+      );
+
+      return;
+
+    }
+
+
+    closeMenuEditModal();
+
+
+    showToast(
+      'Menu updated successfully.'
+    );
+
+
+    const sellerName =
+      decodeURIComponent(
+        currentEditSellerName
+      );
+
+
+    loadSellerSlots(
+      sellerName
+    );
+
+
+    loadFeed();
+
+
+  } catch (error) {
+
+    showToast(
+      'Network error — please try again.'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   DEFAULT MEAL TIME
+========================================================= */
+
+(function setDefaultTime() {
+
+  const now =
+    new Date();
+
+
+  now.setMinutes(
+    now.getMinutes() + 240
+  );
+
+
+  const iso =
+    new Date(
+      now.getTime() -
+      now.getTimezoneOffset() * 60000
+    )
+    .toISOString()
+    .slice(0, 16);
+
+
+  document
+    .getElementById(
+      's-mealtime'
+    )
+    .value =
+      iso;
+
+})();
+
+
+/* =========================================================
+   INITIAL LOAD
+========================================================= */
+
+loadFeed();
+
+</script>
+</body>
+</html>
