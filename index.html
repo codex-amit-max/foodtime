@@ -1,2156 +1,1232 @@
-const express = require('express');
-const cors = require('cors');
-const mongoose = require('mongoose');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 
-const app = express();
+<title>FoodTime — Home-cooked, on the clock</title>
 
-app.use(cors());
-app.use(express.json());
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#A63D2F">
 
-/* =========================================================
-   DATABASE
-   ========================================================= */
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rozha+One&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
+<style>
 
-/* =========================================================
-   SCHEMAS
-   ========================================================= */
-
-const slotSchema = new mongoose.Schema({
-  sellerName: {
-    type: String,
-    required: true,
-    trim: true
-  },
-
-  mealType: {
-    type: String,
-    required: true,
-    enum: ['breakfast', 'lunch', 'dinner']
-  },
-
-  mealTime: {
-    type: Date,
-    required: true
-  },
-
-  cutoffTime: {
-    type: Date,
-    required: true
-  },
-
-  items: {
-    type: String,
-    required: true,
-    trim: true
-  },
-
-  maxPortions: {
-    type: Number,
-    required: true,
-    min: 1
-  },
-
-  /*
-   * This represents portions reserved by orders.
-   * Pending orders also reserve portions.
-   */
-  ordersCount: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-
-  pricePerPortion: {
-    type: Number,
-    required: true,
-    min: 1
-  },
-
-  location: {
-    type: String,
-    default: ''
-  },
-
-  latitude: {
-    type: Number,
-    default: null
-  },
-
-  longitude: {
-    type: Number,
-    default: null
-  },
-
-  upiId: {
-    type: String,
-    default: ''
-  },
-
-  sellerPhone: {
-    type: String,
-    default: ''
-  },
-
-  sellerEmail: {
-    type: String,
-    default: ''
-  },
-
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
-
-
-const orderSchema = new mongoose.Schema({
-  slotId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    index: true
-  },
-
-  buyerName: {
-    type: String,
-    required: true,
-    trim: true
-  },
-
-  buyerPhone: {
-    type: String,
-    default: ''
-  },
-
-  buyerEmail: {
-    type: String,
-    default: ''
-  },
-
-  quantity: {
-    type: Number,
-    required: true,
-    min: 1
-  },
-
-  /*
-   * Snapshot the meal when the buyer orders.
-   *
-   * This is important because the seller may change
-   * a still-pending meal before accepting it.
-   *
-   * The buyer's transaction history should not change.
-   */
-  pricePerPortionAtOrder: {
-    type: Number,
-    required: true
-  },
-
-  itemsAtOrder: {
-    type: String,
-    required: true
-  },
-
-  mealTypeAtOrder: {
-    type: String,
-    default: ''
-  },
-
-  mealTimeAtOrder: {
-    type: Date,
-    required: true
-  },
-
-  status: {
-    type: String,
-
-    enum: [
-      'pending',
-      'accepted',
-      'rejected',
-      'ready',
-      'picked_up',
-      'completed',
-      'cancelled_by_buyer',
-      'cancelled_by_seller'
-    ],
-
-    default: 'pending',
-
-    index: true
-  },
-
-  rejectionReason: {
-    type: String,
-    default: ''
-  },
-
-  cancelReason: {
-    type: String,
-    default: ''
-  },
-
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-
-  acceptedAt: Date,
-  rejectedAt: Date,
-  readyAt: Date,
-  pickedUpAt: Date,
-  completedAt: Date,
-  cancelledAt: Date
-});
-
-
-const Slot = mongoose.model('Slot', slotSchema);
-const Order = mongoose.model('Order', orderSchema);
-
-
-/* =========================================================
-   HELPERS
-   ========================================================= */
-
-function calculateCutoff(mealTime) {
-  const time = new Date(mealTime);
-
-  return new Date(
-    time.getTime() -
-    3 * 60 * 60 * 1000
-  );
+:root {
+  --ivory: #FAF6ED;
+  --ivory-dim: #F1E9D8;
+  --ink: #2B211A;
+  --ink-soft: #6B5D4F;
+  --sindoor: #A63D2F;
+  --sindoor-deep: #7E2E22;
+  --turmeric: #E0A438;
+  --leaf: #4C6444;
+  --leaf-deep: #354833;
+  --line: #E3D8C3;
+  --card: #FFFFFF;
 }
 
-
-function isSlotOpen(slot) {
-  const now = new Date();
-
-  return (
-    now < new Date(slot.cutoffTime) &&
-    slot.ordersCount < slot.maxPortions
-  );
+* {
+  box-sizing: border-box;
 }
 
+body {
+  margin: 0;
+  background: var(--ivory);
+  color: var(--ink);
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 40px;
+}
 
-function getDistanceKm(
-  lat1,
-  lon1,
-  lat2,
-  lon2
-) {
-  const R = 6371;
+h1, h2, h3, .display {
+  font-family: 'Rozha One', serif;
+  font-weight: 400;
+  letter-spacing: 0.2px;
+}
 
-  const dLat =
-    (lat2 - lat1) *
-    Math.PI / 180;
+.mono {
+  font-family: 'Space Mono', monospace;
+}
 
-  const dLon =
-    (lon2 - lon1) *
-    Math.PI / 180;
+header {
+  background: var(--sindoor);
+  color: var(--ivory);
+  padding: 22px 20px 60px;
+  position: relative;
+  overflow: hidden;
+}
 
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) *
-    Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) ** 2;
+header::after {
+  content: "";
+  position: absolute;
+  right: -30px;
+  top: -30px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: var(--turmeric);
+  opacity: 0.18;
+}
 
-  const c =
-    2 *
-    Math.atan2(
-      Math.sqrt(a),
-      Math.sqrt(1 - a)
+.brand {
+  font-size: 30px;
+  margin: 0;
+  position: relative;
+}
+
+.tagline {
+  font-size: 13.5px;
+  opacity: 0.85;
+  margin-top: 4px;
+  position: relative;
+}
+
+.tabs {
+  display: flex;
+  margin: -36px 16px 20px;
+  position: relative;
+  z-index: 2;
+  background: var(--card);
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(43,33,26,0.15);
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.tab-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 14px 8px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  background: var(--sindoor);
+  color: var(--ivory);
+}
+
+.view {
+  display: none;
+  padding: 0 16px;
+}
+
+.view.active {
+  display: block;
+}
+
+.subtabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.subtab-btn {
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.subtab-btn.active {
+  background: var(--leaf);
+  border-color: var(--leaf);
+  color: var(--ivory);
+}
+
+.subview {
+  display: none;
+}
+
+.subview.active {
+  display: block;
+}
+
+.location-bar {
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.location-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.loc-btn {
+  border: 1.5px solid var(--leaf);
+  background: var(--card);
+  color: var(--leaf);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.loc-btn.active-on {
+  background: var(--leaf);
+  color: var(--ivory);
+}
+
+.radius-select {
+  flex: 1;
+  min-width: 110px;
+  margin-bottom: 0;
+  padding: 9px 10px;
+  font-size: 13.5px;
+}
+
+.loc-status {
+  width: 100%;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 8px;
+}
+
+.address-input {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  box-shadow: 0 2px 8px rgba(43,33,26,0.05);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.seller-name {
+  font-size: 17px;
+  margin: 0 0 2px;
+}
+
+.meal-type {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.items {
+  font-size: 14.5px;
+  margin: 10px 0;
+  line-height: 1.5;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.price-tag {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  color: var(--sindoor);
+  font-size: 15px;
+}
+
+.distance-tag {
+  font-size: 12px;
+  color: var(--leaf-deep);
+  font-weight: 600;
+}
+
+.dial-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dial {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  position: relative;
+  background:
+    conic-gradient(
+      var(--turmeric) calc(var(--pct,50) * 1%),
+      var(--ivory-dim) 0
     );
-
-  return R * c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-
-/*
- * Determine whether a slot has an accepted order.
- *
- * IMPORTANT:
- * The editing restrictions are based on the existence
- * of an accepted order.
- */
-async function hasAcceptedOrder(slotId) {
-
-  const count =
-    await Order.countDocuments({
-      slotId,
-      status: {
-        $in: [
-          'accepted',
-          'ready',
-          'picked_up',
-          'completed'
-        ]
-      }
-    });
-
-  return count > 0;
+.dial::before {
+  content: "";
+  width: 34px;
+  height: 34px;
+  background: var(--card);
+  border-radius: 50%;
 }
+
+.countdown-text {
+  line-height: 1.3;
+}
+
+.countdown-value {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.countdown-label {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.status-locked {
+  color: var(--ink-soft);
+}
+
+.status-locked .dial {
+  background: var(--ivory-dim);
+}
+
+.btn {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 13px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.btn-primary {
+  background: var(--sindoor);
+  color: var(--ivory);
+}
+
+.btn-secondary {
+  background: var(--leaf);
+  color: var(--ivory);
+}
+
+.btn-whatsapp {
+  background: #25D366;
+  color: #fff;
+}
+
+.btn-upi {
+  background: var(--turmeric);
+  color: var(--ink);
+}
+
+.btn-danger {
+  background: var(--card);
+  color: var(--sindoor);
+  border: 1.5px solid var(--sindoor);
+}
+
+.btn-warning {
+  background: var(--turmeric);
+  color: var(--ink);
+}
+
+.btn:disabled {
+  background: var(--line);
+  color: var(--ink-soft);
+  cursor: not-allowed;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-row .btn {
+  margin-top: 10px;
+}
+
+.btn-row .btn {
+  flex: 1;
+}
+
+.order-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.order-row input {
+  flex: 1;
+}
+
+.order-total {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 6px;
+}
+
+.order-total span {
+  color: var(--sindoor);
+  font-weight: 700;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14.5px;
+  background: var(--card);
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.price-input-wrap {
+  position: relative;
+}
+
+.price-input-wrap::before {
+  content: "₹";
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.price-input-wrap input {
+  padding-left: 26px;
+}
+
+.location-share {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.location-share .loc-btn {
+  margin-bottom: 0;
+}
+
+.location-share-status {
+  font-size: 12.5px;
+  color: var(--leaf-deep);
+  font-weight: 600;
+}
+
+.empty {
+  text-align: center;
+  padding: 50px 20px;
+  color: var(--ink-soft);
+}
+
+.empty .display {
+  font-size: 22px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--ivory);
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 1000;
+  max-width: 85%;
+  text-align: center;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-6px);
+}
+
+.badge-open {
+  display: inline-block;
+  background: var(--leaf);
+  color: var(--ivory);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+.badge-locked {
+  display: inline-block;
+  background: var(--ivory-dim);
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+.badge-pending {
+  display: inline-block;
+  background: var(--turmeric);
+  color: var(--ink);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+.order-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px dashed var(--line);
+  font-size: 13.5px;
+  gap: 10px;
+}
+
+.order-detail-row:first-child {
+  border-top: none;
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink-soft);
+  margin: 14px 0 6px;
+}
+
+.disclaimer {
+  background: var(--ivory-dim);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 0 16px 14px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.disclaimer p {
+  margin: 0 0 6px;
+}
+
+.disclaimer p:last-child {
+  margin-bottom: 0;
+}
+
+.edit-note {
+  background: var(--ivory-dim);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 10px 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+.edit-note strong {
+  color: var(--ink);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(43,33,26,0.55);
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 900;
+  padding: 0;
+}
+
+.modal-backdrop.show {
+  display: flex;
+}
+
+.modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--ivory);
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+}
+
+.modal h2 {
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+.modal-subtitle {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-bottom: 16px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.modal-actions .btn {
+  flex: 1;
+}
+
+.readonly-field {
+  background: var(--ivory-dim);
+  color: var(--ink-soft);
+}
+
+.rule-box {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 14px;
+  background: var(--card);
+}
+
+.rule-box p {
+  margin: 4px 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.rule-box strong {
+  color: var(--ink);
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+  <p class="brand">FoodTime</p>
+  <p class="tagline">Home-cooked meals, on the family's clock.</p>
+</header>
+
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="buyer">
+    Find a Meal
+  </button>
+
+  <button class="tab-btn" data-tab="seller">
+    I'm Cooking
+  </button>
+</div>
+
+
+<!-- ======================================================
+     BUYER
+======================================================= -->
+
+<div class="view active" id="view-buyer">
+
+  <div class="subtabs">
+
+    <button
+      class="subtab-btn active"
+      data-sub="browse">
+      Browse
+    </button>
+
+    <button
+      class="subtab-btn"
+      data-sub="myorders">
+      My Orders
+    </button>
+
+  </div>
+
+
+  <div class="subview active" id="sub-browse">
+
+    <div class="location-bar">
+
+      <div class="location-bar-row">
+
+        <button
+          class="loc-btn"
+          id="btn-locate">
+          📍 Use My Location
+        </button>
+
+        <select
+          class="radius-select"
+          id="radius-select">
+
+          <option value="1">
+            Within 1 km
+          </option>
+
+          <option value="3" selected>
+            Within 3 km
+          </option>
+
+          <option value="5">
+            Within 5 km
+          </option>
+
+          <option value="10">
+            Within 10 km
+          </option>
+
+          <option value="20">
+            Within 20 km
+          </option>
+
+        </select>
+
+      </div>
+
+      <input
+        type="text"
+        class="address-input"
+        id="buyer-address"
+        placeholder="Or type your area / address">
+
+      <div
+        class="loc-status"
+        id="loc-status">
+        Showing all meals — turn on location or type your address to filter by distance
+      </div>
+
+    </div>
+
+    <div id="buyer-feed"></div>
+
+  </div>
+
+
+  <div class="subview" id="sub-myorders">
+
+    <label>
+      Your Name (same one used to order)
+    </label>
+
+    <input
+      type="text"
+      id="mo-name"
+      placeholder="e.g. Priya">
+
+    <button
+      class="btn btn-secondary"
+      id="btn-load-myorders">
+      View My Orders
+    </button>
+
+    <div
+      id="my-orders-list"
+      style="margin-top:16px;">
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- ======================================================
+     SELLER
+======================================================= -->
+
+<div class="view" id="view-seller">
+
+  <div class="subtabs">
+
+    <button
+      class="subtab-btn active"
+      data-sub="post">
+      Post a Menu
+    </button>
+
+    <button
+      class="subtab-btn"
+      data-sub="orders">
+      My Orders
+    </button>
+
+  </div>
+
+
+  <!-- POST MENU -->
+
+  <div class="subview active" id="sub-post">
+
+    <label>Your Name</label>
+
+    <input
+      type="text"
+      id="s-name"
+      placeholder="e.g. Amit's Kitchen">
+
+
+    <label>Meal Slot</label>
+
+    <select id="s-mealtype">
+
+      <option value="breakfast">
+        Breakfast
+      </option>
+
+      <option value="lunch" selected>
+        Lunch
+      </option>
+
+      <option value="dinner">
+        Dinner
+      </option>
+
+    </select>
+
+
+    <label>Meal Time</label>
+
+    <input
+      type="datetime-local"
+      id="s-mealtime">
+
+
+    <label>What's on the menu?</label>
+
+    <textarea
+      id="s-items"
+      placeholder="e.g. Rajma Chawal, salad, extra roti">
+    </textarea>
+
+
+    <label>Price per Portion</label>
+
+    <div class="price-input-wrap">
+
+      <input
+        type="number"
+        id="s-price"
+        min="1"
+        placeholder="e.g. 80">
+
+    </div>
+
+
+    <label>Extra Portions Available</label>
+
+    <input
+      type="number"
+      id="s-portions"
+      min="1"
+      placeholder="e.g. 4">
+
+
+    <label>Your Location</label>
+
+    <div class="location-share">
+
+      <button
+        class="loc-btn"
+        id="btn-share-location"
+        type="button">
+        📍 Use My Location
+      </button>
+
+      <span
+        class="location-share-status"
+        id="share-loc-status">
+      </span>
+
+    </div>
+
+    <input
+      type="text"
+      id="s-location"
+      placeholder="Area / address (auto-filled or type manually)">
+
+
+    <label>UPI ID (for buyers to pay you)</label>
+
+    <input
+      type="text"
+      id="s-upi"
+      placeholder="e.g. amit@okhdfcbank">
+
+
+    <label>Phone Number (for WhatsApp orders)</label>
+
+    <input
+      type="text"
+      id="s-phone"
+      value="+91 "
+      placeholder="+91 98XXXXXXXX">
+
+
+    <label>Email (for order notifications)</label>
+
+    <input
+      type="email"
+      id="s-email"
+      placeholder="e.g. amit@gmail.com">
+
+
+    <button
+      class="btn btn-primary"
+      id="btn-post">
+      Publish Menu
+    </button>
+
+  </div>
+
+
+  <!-- SELLER ORDERS -->
+
+  <div class="subview" id="sub-orders">
+
+    <label>
+      Your Name (same as used to post)
+    </label>
+
+    <input
+      type="text"
+      id="o-name"
+      placeholder="e.g. Amit's Kitchen">
+
+
+    <button
+      class="btn btn-secondary"
+      id="btn-refresh-orders">
+      View My Order Queue
+    </button>
+
+
+    <div
+      class="section-label"
+      style="margin-top:18px;">
+      Order Queue
+    </div>
+
+    <div id="seller-queue"></div>
+
+
+    <div
+      class="section-label"
+      style="margin-top:18px;">
+      Your Menus
+    </div>
+
+    <div
+      id="seller-slots"
+      style="margin-top:8px;">
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- ======================================================
+     DISCLAIMER
+======================================================= -->
+
+<div class="disclaimer">
+
+  <p>
+    <strong>Cancellations:</strong>
+    Free within 10 minutes of ordering.
+    50% refund if cancelled 10–30 minutes after ordering.
+    No refund after 30 minutes or once the ordering window closes.
+    Refunds are arranged directly between buyer and seller —
+    FoodTime does not process payments.
+  </p>
+
+  <p>
+    <strong>Pickup &amp; Delivery:</strong>
+    FoodTime connects home cooks with nearby buyers only.
+    It is not a delivery service — pickup or delivery must be
+    arranged directly between buyer and seller.
+  </p>
+
+</div>
+
+
+<div
+  class="toast"
+  id="toast">
+</div>
+
+
+<!-- ======================================================
+     EDIT MENU MODAL
+======================================================= -->
+
+<div
+  class="modal-backdrop"
+  id="edit-modal">
+
+  <div class="modal">
+
+    <h2>Edit Menu</h2>
+
+    <div
+      class="modal-subtitle"
+      id="edit-modal-subtitle">
+      Update your menu.
+    </div>
+
+
+    <div
+      class="rule-box"
+      id="edit-rule-box">
+    </div>
+
+
+    <label>Meal Type</label>
+
+    <select id="edit-mealtype">
+
+      <option value="breakfast">
+        Breakfast
+      </option>
+
+      <option value="lunch">
+        Lunch
+      </option>
+
+      <option value="dinner">
+        Dinner
+      </option>
+
+    </select>
+
+
+    <label>Meal Time</label>
+
+    <input
+      type="datetime-local"
+      id="edit-mealtime">
+
+
+    <label>What's on the menu?</label>
+
+    <textarea
+      id="edit-items">
+    </textarea>
+
+
+    <label>Price per Portion</label>
+
+    <input
+      type="number"
+      id="edit-price"
+      min="1">
+
+
+    <label>Available Portions</label>
+
+    <input
+      type="number"
+      id="edit-portions"
+      min="1">
+
+
+    <label>Location</label>
+
+    <input
+      type="text"
+      id="edit-location">
+
+
+    <label>UPI ID</label>
+
+    <input
+      type="text"
+      id="edit-upi">
+
+
+    <label>Phone Number</label>
+
+    <input
+      type="text"
+      id="edit-phone">
+
+
+    <label>Email</label>
+
+    <input
+      type="email"
+      id="edit-email">
+
+
+    <div class="modal-actions">
+
+      <button
+        class="btn btn-danger"
+        id="btn-close-edit">
+        Cancel
+      </button>
+
+      <button
+        class="btn btn-primary"
+        id="btn-save-edit">
+        Save Changes
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   CONFIG
+========================================================= */
+
+const API_BASE =
+  'https://foodfoodtime-backend.onrender.com';
+
+const EMAILJS_PUBLIC_KEY =
+  '22IBx5OU8nz_0PCUe';
+
+const EMAILJS_SERVICE =
+  'service_ze37a95';
+
+const EMAILJS_BUYER_TEMPLATE =
+  'template_4e5ix35';
+
+const EMAILJS_SELLER_TEMPLATE =
+  'template_5z57cbb';
 
 
 /* =========================================================
-   CREATE MEAL
-   ========================================================= */
+   STATE
+========================================================= */
 
-app.post('/api/slots', async (req, res) => {
+let slotsById = {};
 
-  try {
+let buyerLat = null;
+let buyerLng = null;
+let buyerLocOn = false;
 
-    const {
-      sellerName,
-      mealType,
-      mealTime,
-      items,
-      maxPortions,
-      pricePerPortion,
-      location,
-      latitude,
-      longitude,
-      upiId,
-      sellerPhone,
-      sellerEmail
-    } = req.body;
+let sellerLat = null;
+let sellerLng = null;
+let sellerLocOn = false;
 
-    if (
-      !sellerName ||
-      !mealType ||
-      !mealTime ||
-      !items ||
-      !maxPortions ||
-      !pricePerPortion
-    ) {
-      return res.status(400).json({
-        error:
-          'Please fill in all required fields.'
-      });
-    }
+let editingSlotId = null;
+let editingSellerName = null;
+let editingSlotData = null;
 
-    const parsedMealTime =
-      new Date(mealTime);
 
-    if (
-      Number.isNaN(
-        parsedMealTime.getTime()
+/* =========================================================
+   BASIC UI
+========================================================= */
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+
+  btn.addEventListener('click', () => {
+
+    document
+      .querySelectorAll('.tab-btn')
+      .forEach(b =>
+        b.classList.remove('active')
+      );
+
+    document
+      .querySelectorAll('.view')
+      .forEach(v =>
+        v.classList.remove('active')
+      );
+
+    btn.classList.add('active');
+
+    document
+      .getElementById(
+        'view-' + btn.dataset.tab
       )
-    ) {
-      return res.status(400).json({
-        error: 'Invalid meal time.'
-      });
+      .classList.add('active');
+
+    if (btn.dataset.tab === 'buyer') {
+      loadFeed();
     }
 
-    if (
-      Number(maxPortions) < 1
-    ) {
-      return res.status(400).json({
-        error:
-          'Available portions must be at least 1.'
-      });
-    }
+  });
 
-    if (
-      Number(pricePerPortion) < 1
-    ) {
-      return res.status(400).json({
-        error:
-          'Price must be at least ₹1.'
-      });
-    }
-
-    const newSlot =
-      new Slot({
-
-        sellerName:
-          sellerName.trim(),
-
-        mealType,
-
-        mealTime:
-          parsedMealTime,
-
-        cutoffTime:
-          calculateCutoff(
-            parsedMealTime
-          ),
-
-        items:
-          items.trim(),
-
-        maxPortions:
-          Number(maxPortions),
-
-        pricePerPortion:
-          Number(pricePerPortion),
-
-        location:
-          location || '',
-
-        latitude:
-          latitude != null
-            ? Number(latitude)
-            : null,
-
-        longitude:
-          longitude != null
-            ? Number(longitude)
-            : null,
-
-        upiId:
-          upiId || '',
-
-        sellerPhone:
-          sellerPhone || '',
-
-        sellerEmail:
-          sellerEmail || ''
-      });
-
-    await newSlot.save();
-
-    res.status(201).json(
-      newSlot
-    );
-
-  } catch (err) {
-
-    console.error(
-      'Create slot error:',
-      err
-    );
-
-    res.status(500).json({
-      error:
-        'Could not publish meal.'
-    });
-  }
 });
 
 
-/* =========================================================
-   GET ALL MEALS
-   ========================================================= */
+document.querySelectorAll('.subtab-btn').forEach(btn => {
 
-app.get('/api/slots', async (req, res) => {
+  btn.addEventListener('click', () => {
 
-  try {
+    const parent =
+      btn.closest('.view');
 
-    const {
-      lat,
-      lng,
-      radius
-    } = req.query;
-
-    const slots =
-      await Slot
-        .find()
-        .sort({
-          mealTime: 1,
-          createdAt: -1
-        });
-
-    let result =
-      slots.map(slot => {
-
-        const obj =
-          slot.toObject();
-
-        obj.status =
-          isSlotOpen(slot)
-            ? 'open'
-            : 'locked';
-
-        if (
-          lat &&
-          lng &&
-          slot.latitude != null &&
-          slot.longitude != null
-        ) {
-
-          obj.distanceKm =
-            getDistanceKm(
-              Number(lat),
-              Number(lng),
-              slot.latitude,
-              slot.longitude
-            );
-        }
-
-        return obj;
-      });
-
-
-    if (
-      lat &&
-      lng &&
-      radius
-    ) {
-
-      result =
-        result.filter(
-          slot =>
-            slot.distanceKm != null &&
-            slot.distanceKm <=
-              Number(radius)
-        );
-
-      result.sort(
-        (a, b) =>
-          a.distanceKm -
-          b.distanceKm
-      );
-    }
-
-    res.json(result);
-
-  } catch (err) {
-
-    console.error(
-      'Get slots error:',
-      err
-    );
-
-    res.status(500).json({
-      error:
-        'Could not load meals.'
-    });
-  }
-});
-
-
-/* =========================================================
-   SELLER'S MEALS
-   ========================================================= */
-
-app.get(
-  '/api/slots/seller/:sellerName',
-  async (req, res) => {
-
-    try {
-
-      const sellerName =
-        req.params.sellerName;
-
-      const slots =
-        await Slot
-          .find({
-            sellerName
-          })
-          .sort({
-            mealTime: 1,
-            createdAt: -1
-          });
-
-      const result =
-        await Promise.all(
-          slots.map(
-            async slot => {
-
-              const accepted =
-                await hasAcceptedOrder(
-                  slot._id
-                );
-
-              const pendingCount =
-                await Order.countDocuments({
-                  slotId: slot._id,
-                  status: 'pending'
-                });
-
-              const acceptedCount =
-                await Order.countDocuments({
-                  slotId: slot._id,
-                  status: {
-                    $in: [
-                      'accepted',
-                      'ready',
-                      'picked_up',
-                      'completed'
-                    ]
-                  }
-                });
-
-              return {
-                ...slot.toObject(),
-
-                pendingOrders:
-                  pendingCount,
-
-                acceptedOrders:
-                  acceptedCount,
-
-                hasAcceptedOrder:
-                  accepted,
-
-                /*
-                 * These are informational values for
-                 * the frontend. The backend still
-                 * enforces the rules.
-                 */
-                canEditFreely:
-                  !accepted,
-
-                canIncreaseQuantity:
-                  true,
-
-                canExtendTime:
-                  true
-              };
-            }
-          )
-        );
-
-      res.json(result);
-
-    } catch (err) {
-
-      console.error(
-        'Seller slots error:',
-        err
-      );
-
-      res.status(500).json({
-        error:
-          'Could not load your meals.'
-      });
-    }
-  }
-);
-
-
-/* =========================================================
-   EDIT MEAL
-   =========================================================
-
-   BEFORE ANY ACCEPTED ORDER:
-     - Menu can change
-     - Meal type can change
-     - Price can change
-     - Quantity can change
-     - Time can change
-     - Location can change
-
-   AFTER AN ORDER IS ACCEPTED:
-     - Quantity can ONLY increase
-     - Meal time can ONLY be extended
-     - Everything else is locked
-   ========================================================= */
-
-app.patch(
-  '/api/slots/:id',
-  async (req, res) => {
-
-    try {
-
-      const slot =
-        await Slot.findById(
-          req.params.id
-        );
-
-      if (!slot) {
-        return res.status(404).json({
-          error:
-            'Meal listing not found.'
-        });
-      }
-
-      const accepted =
-        await hasAcceptedOrder(
-          slot._id
-        );
-
-
-      /* ---------------------------------------------------
-         FULL EDIT MODE
-         --------------------------------------------------- */
-
-      if (!accepted) {
-
-        if (
-          req.body.mealType !==
-          undefined
-        ) {
-
-          if (
-            ![
-              'breakfast',
-              'lunch',
-              'dinner'
-            ].includes(
-              req.body.mealType
-            )
-          ) {
-
-            return res.status(400).json({
-              error:
-                'Invalid meal type.'
-            });
-          }
-
-          slot.mealType =
-            req.body.mealType;
-        }
-
-
-        if (
-          req.body.items !==
-          undefined
-        ) {
-
-          if (
-            !String(
-              req.body.items
-            ).trim()
-          ) {
-
-            return res.status(400).json({
-              error:
-                'Menu cannot be empty.'
-            });
-          }
-
-          slot.items =
-            String(
-              req.body.items
-            ).trim();
-        }
-
-
-        if (
-          req.body.pricePerPortion !==
-          undefined
-        ) {
-
-          const price =
-            Number(
-              req.body.pricePerPortion
-            );
-
-          if (
-            !Number.isFinite(price) ||
-            price < 1
-          ) {
-
-            return res.status(400).json({
-              error:
-                'Invalid price.'
-            });
-          }
-
-          slot.pricePerPortion =
-            price;
-        }
-
-
-        if (
-          req.body.maxPortions !==
-          undefined
-        ) {
-
-          const portions =
-            Number(
-              req.body.maxPortions
-            );
-
-          if (
-            !Number.isInteger(
-              portions
-            ) ||
-            portions < 1
-          ) {
-
-            return res.status(400).json({
-              error:
-                'Invalid quantity.'
-            });
-          }
-
-          /*
-           * Even in full-edit mode we must not allow
-           * the seller to reduce availability below
-           * portions already reserved by buyers.
-           */
-          if (
-            portions <
-            slot.ordersCount
-          ) {
-
-            return res.status(400).json({
-              error:
-                `Quantity cannot be lower than ${slot.ordersCount}, because those portions are already reserved by buyers.`
-            });
-          }
-
-          slot.maxPortions =
-            portions;
-        }
-
-
-        if (
-          req.body.mealTime !==
-          undefined
-        ) {
-
-          const newTime =
-            new Date(
-              req.body.mealTime
-            );
-
-          if (
-            Number.isNaN(
-              newTime.getTime()
-            )
-          ) {
-
-            return res.status(400).json({
-              error:
-                'Invalid meal time.'
-            });
-          }
-
-          slot.mealTime =
-            newTime;
-
-          slot.cutoffTime =
-            calculateCutoff(
-              newTime
-            );
-        }
-
-
-        if (
-          req.body.location !==
-          undefined
-        ) {
-
-          slot.location =
-            req.body.location || '';
-        }
-
-
-        if (
-          req.body.latitude !==
-          undefined
-        ) {
-
-          slot.latitude =
-            req.body.latitude != null
-              ? Number(
-                  req.body.latitude
-                )
-              : null;
-        }
-
-
-        if (
-          req.body.longitude !==
-          undefined
-        ) {
-
-          slot.longitude =
-            req.body.longitude != null
-              ? Number(
-                  req.body.longitude
-                )
-              : null;
-        }
-
-
-        if (
-          req.body.upiId !==
-          undefined
-        ) {
-
-          slot.upiId =
-            req.body.upiId || '';
-        }
-
-
-        if (
-          req.body.sellerPhone !==
-          undefined
-        ) {
-
-          slot.sellerPhone =
-            req.body.sellerPhone || '';
-        }
-
-
-        if (
-          req.body.sellerEmail !==
-          undefined
-        ) {
-
-          slot.sellerEmail =
-            req.body.sellerEmail || '';
-        }
-
-
-        slot.updatedAt =
-          new Date();
-
-        await slot.save();
-
-        return res.json({
-          success: true,
-          mode: 'full_edit',
-          slot
-        });
-      }
-
-
-      /* ---------------------------------------------------
-         RESTRICTED EDIT MODE
-         --------------------------------------------------- */
-
-      /*
-       * Only quantity and meal time are accepted.
-       */
-
-      const allowedKeys = [
-        'maxPortions',
-        'mealTime'
-      ];
-
-      const suppliedKeys =
-        Object.keys(req.body);
-
-      const forbiddenKeys =
-        suppliedKeys.filter(
-          key =>
-            !allowedKeys.includes(key)
-        );
-
-      if (
-        forbiddenKeys.length
-      ) {
-
-        return res.status(400).json({
-          error:
-            'This meal has an accepted order. Only available quantity and meal time can be changed.'
-        });
-      }
-
-
-      if (
-        req.body.maxPortions !==
-        undefined
-      ) {
-
-        const newQuantity =
-          Number(
-            req.body.maxPortions
-          );
-
-        if (
-          !Number.isInteger(
-            newQuantity
-          ) ||
-          newQuantity < 1
-        ) {
-
-          return res.status(400).json({
-            error:
-              'Invalid quantity.'
-          });
-        }
-
-        if (
-          newQuantity <
-          slot.maxPortions
-        ) {
-
-          return res.status(400).json({
-            error:
-              'After an order is accepted, available quantity can only be increased.'
-          });
-        }
-
-        slot.maxPortions =
-          newQuantity;
-      }
-
-
-      if (
-        req.body.mealTime !==
-        undefined
-      ) {
-
-        const newTime =
-          new Date(
-            req.body.mealTime
-          );
-
-        if (
-          Number.isNaN(
-            newTime.getTime()
-          )
-        ) {
-
-          return res.status(400).json({
-            error:
-              'Invalid meal time.'
-          });
-        }
-
-        if (
-          newTime <
-          slot.mealTime
-        ) {
-
-          return res.status(400).json({
-            error:
-              'After an order is accepted, the meal time can only be extended, not moved earlier.'
-          });
-        }
-
-        slot.mealTime =
-          newTime;
-
-        slot.cutoffTime =
-          calculateCutoff(
-            newTime
-          );
-      }
-
-
-      slot.updatedAt =
-        new Date();
-
-      await slot.save();
-
-      return res.json({
-        success: true,
-        mode: 'restricted_edit',
-        slot
-      });
-
-    } catch (err) {
-
-      console.error(
-        'Edit slot error:',
-        err
-      );
-
-      res.status(500).json({
-        error:
-          'Could not update the meal.'
-      });
-    }
-  }
-);
-
-
-/* =========================================================
-   CREATE ORDER
-   ========================================================= */
-
-app.post(
-  '/api/orders',
-  async (req, res) => {
-
-    try {
-
-      const {
-        slotId,
-        buyerName,
-        buyerPhone,
-        buyerEmail,
-        quantity
-      } = req.body;
-
-      const qty =
-        Number(quantity);
-
-      if (
-        !slotId ||
-        !buyerName ||
-        !Number.isInteger(qty) ||
-        qty < 1
-      ) {
-
-        return res.status(400).json({
-          error:
-            'Please provide valid order details.'
-        });
-      }
-
-      const slot =
-        await Slot.findById(
-          slotId
-        );
-
-      if (!slot) {
-
-        return res.status(404).json({
-          error:
-            'Meal listing not found.'
-        });
-      }
-
-
-      if (
-        !isSlotOpen(slot)
-      ) {
-
-        return res.status(400).json({
-          error:
-            'Ordering is closed for this meal.'
-        });
-      }
-
-
-      const portionsLeft =
-        slot.maxPortions -
-        slot.ordersCount;
-
-
-      if (
-        qty > portionsLeft
-      ) {
-
-        return res.status(400).json({
-          error:
-            `Only ${portionsLeft} portion(s) are available.`
-        });
-      }
-
-
-      const order =
-        new Order({
-
-          slotId,
-
-          buyerName:
-            buyerName.trim(),
-
-          buyerPhone:
-            buyerPhone || '',
-
-          buyerEmail:
-            buyerEmail || '',
-
-          quantity:
-            qty,
-
-          pricePerPortionAtOrder:
-            slot.pricePerPortion,
-
-          itemsAtOrder:
-            slot.items,
-
-          mealTypeAtOrder:
-            slot.mealType,
-
-          mealTimeAtOrder:
-            slot.mealTime,
-
-          status:
-            'pending'
-        });
-
-
-      /*
-       * Reserve the portions immediately.
-       */
-      slot.ordersCount += qty;
-
-      await slot.save();
-      await order.save();
-
-      res.status(201).json(
-        order
-      );
-
-    } catch (err) {
-
-      console.error(
-        'Create order error:',
-        err
-      );
-
-      res.status(500).json({
-        error:
-          'Could not place order.'
-      });
-    }
-  }
-);
-
-
-/* =========================================================
-   BUYER ORDERS
-   ========================================================= */
-
-app.get(
-  '/api/orders/buyer/:buyerName',
-  async (req, res) => {
-
-    try {
-
-      const orders =
-        await Order
-          .find({
-            buyerName:
-              req.params.buyerName
-          })
-          .sort({
-            createdAt: -1
-          });
-
-
-      const result =
-        await Promise.all(
-          orders.map(
-            async order => {
-
-              const slot =
-                await Slot.findById(
-                  order.slotId
-                );
-
-              if (!slot) {
-                return {
-                  ...order.toObject(),
-                  slot: null
-                };
-              }
-
-
-              return {
-
-                ...order.toObject(),
-
-                slot: {
-
-                  _id:
-                    slot._id,
-
-                  sellerName:
-                    slot.sellerName,
-
-                  mealType:
-                    slot.mealType,
-
-                  mealTime:
-                    slot.mealTime,
-
-                  cutoffTime:
-                    slot.cutoffTime,
-
-                  items:
-                    slot.items,
-
-                  pricePerPortion:
-                    slot.pricePerPortion,
-
-                  upiId:
-                    slot.upiId,
-
-                  sellerPhone:
-                    slot.sellerPhone,
-
-                  location:
-                    slot.location,
-
-                  canCancel:
-                    new Date(
-                      slot.cutoffTime
-                    ) > new Date()
-                }
-              };
-            }
-          )
-        );
-
-
-      res.json(result);
-
-    } catch (err) {
-
-      console.error(
-        'Buyer orders error:',
-        err
-      );
-
-      res.status(500).json({
-        error:
-          'Could not load orders.'
-      });
-    }
-  }
-);
-
-
-/* =========================================================
-   SELLER ORDER QUEUE
-   ========================================================= */
-
-app.get(
-  '/api/orders/seller/:sellerName',
-  async (req, res) => {
-
-    try {
-
-      const slots =
-        await Slot.find({
-          sellerName:
-            req.params.sellerName
-        });
-
-
-      const slotIds =
-        slots.map(
-          slot => slot._id
-        );
-
-
-      const orders =
-        await Order
-          .find({
-            slotId: {
-              $in: slotIds
-            }
-          })
-          .sort({
-            createdAt: -1
-          });
-
-
-      const slotMap = {};
-
-      slots.forEach(slot => {
-
-        slotMap[
-          slot._id.toString()
-        ] =
-          slot;
-
-      });
-
-
-      const result =
-        orders.map(order => {
-
-          const slot =
-            slotMap[
-              order.slotId.toString()
-            ];
-
-
-          return {
-
-            ...order.toObject(),
-
-            slot: slot
-              ? {
-
-                  _id:
-                    slot._id,
-
-                  sellerName:
-                    slot.sellerName,
-
-                  mealType:
-                    slot.mealType,
-
-                  mealTime:
-                    slot.mealTime,
-
-                  cutoffTime:
-                    slot.cutoffTime,
-
-                  items:
-                    slot.items,
-
-                  pricePerPortion:
-                    slot.pricePerPortion,
-
-                  maxPortions:
-                    slot.maxPortions,
-
-                  ordersCount:
-                    slot.ordersCount,
-
-                  location:
-                    slot.location
-
-                }
-              : null
-          };
-        });
-
-
-      res.json(result);
-
-    } catch (err) {
-
-      console.error(
-        'Seller orders error:',
-        err
-      );
-
-      res.status(500).json({
-        error:
-          'Could not load seller orders.'
-      });
-    }
-  }
-);
-
-
-/* =========================================================
-   ACCEPT ORDER
-   ========================================================= */
-
-app.patch(
-  '/api/orders/:id/accept',
-  async (req, res) => {
-
-    try {
-
-      const order =
-        await Order.findById(
-          req.params.id
-        );
-
-      if (!order) {
-
-        return res.status(404).json({
-          error:
-            'Order not found.'
-        });
-      }
-
-
-      if (
-        order.status !==
-        'pending'
-      ) {
-
-        return res.status(400).json({
-          error:
-            'Only pending orders can be accepted.'
-        });
-      }
-
-
-      const slot =
-        await Slot.findById(
-          order.slotId
-        );
-
-      if (!slot) {
-
-        return res.status(404).json({
-          error:
-            'Meal listing not found.'
-        });
-      }
-
-
-      /*
-       * Verify the reserved quantity still exists.
-       */
-      if (
-        slot.ordersCount >
-        slot.maxPortions
-      ) {
-
-        return res.status(400).json({
-          error:
-            'There are not enough available portions to accept this order.'
-        });
-      }
-
-
-      order.status =
-        'accepted';
-
-      order.acceptedAt =
-        new Date();
-
-      await order.save();
-
-
-      res.json(order);
-
-    } catch (err) {
-
-      console.error(
-        'Accept order error:',
-        err
-      );
-
-      res.status(500).json({
-        error:
-          'Could not accept order.'
-      });
-    }
-  }
-);
-
-
-/* =========================================================
-   REJECT ORDER
-   ========================================================= */
-
-app.patch(
-  '/api/orders/:id/reject',
-  async (req, res) => {
-
-    try {
-
-      const reason =
-        String(
-          req.body.reason || ''
-        ).trim();
-
-
-      if (!reason) {
-
-        return res.status(400).json({
-          error:
-            'A rejection reason is mandatory.'
-        });
-      }
-
-
-      const order =
-        await Order.findById(
-          req.params.id
-        );
-
-      if (!order) {
-
-        return res.status(404).json({
-          error:
-            'Order not found.'
-        });
-      }
-
-
-      if (
-        order.status !==
-        'pending'
-      ) {
-
-        return res.status(400).json({
-          error:
-            'Only pending orders can be rejected.'
-        });
-      }
-
-
-      const slot =
-        await Slot.findById(
-          order.slotId
-        );
-
-
-      /*
-       * Release the reserved portions.
-       */
-      if (slot) {
-
-        slot.ordersCount =
-          Math.max(
-            0,
-            slot.ordersCount -
-            order.quantity
-          );
-
-        await slot.save();
-      }
-
-
-      order.status =
-        'rejected';
-
-      order.rejectionReason =
-        reason;
-
-      order.rejectedAt =
-        new Date();
-
-      await order.save();
-
-
-      res.json(order);
-
-    } catch (err) {
-
-      console.error(
-        'Reject order error:',
-        err
-      );
-
-      res.status(500).json({
-        error:
-          'Could not reject order.'
-      });
-    }
-  }
-);
-
-
-/* =========================================================
-   SELLER CANCEL ACCEPTED ORDER
-   ========================================================= */
-
-app.patch(
-  '/api/orders/:id/seller-cancel',
-  async (req, res) => {
-
-    try {
-
-      const reason =
-        String(
-          req.body.reason || ''
-        ).trim();
-
-
-      if (!reason) {
-
-        return res.status(400).json({
-          error:
-            'A cancellation reason is required.'
-        });
-      }
-
-
-      const order =
-        await Order.findById(
-          req.params.id
-        );
-
-      if (!order) {
-
-        return res.status(404).json({
-          error:
-            'Order not found.'
-        });
-      }
-
-
-      if (
-        ![
-          'pending',
-          'accepted'
-        ].includes(
-          order.status
-        )
-      ) {
-
-        return res.status(400).json({
-          error:
-            'This order cannot be cancelled at its current status.'
-        });
-      }
-
-
-      const slot =
-        await Slot.findById(
-          order.slotId
-        );
-
-
-      if (
-        order.status ===
-        'pending'
-      ) {
-
-        if (slot) {
-
-          slot.ordersCount =
-            Math.max(
-              0,
-              slot.ordersCount -
-              order.quantity
-            );
-
-          await slot.save();
-        }
-
-
-        order.status =
-          'rejected';
-
-        order.rejectionReason =
-          reason;
-
-        order.rejectedAt =
-          new Date();
-
-      } else {
-
-        /*
-         * Once accepted, this is a genuine seller
-         * cancellation rather than a rejection.
-         */
-        order.status =
-          'cancelled_by_seller';
-
-        order.cancelReason =
-          reason;
-
-        order.cancelledAt =
-          new Date();
-
-        /*
-         * The meal quantity is released because
-         * the accepted order no longer exists.
-         */
-        if (slot) {
-
-          slot.ordersCount =
-            Math.max(
-              0,
-              slot.ordersCount -
-              order.quantity
-            );
-
-          await slot.save();
-        }
-      }
-
-
-      await order.save();
-
-      res.json(order);
-
-    } catch (err) {
-
-      console.error(
-        'Seller cancel error:',
-        err
-      );
-
-      res.status(500).json({
-        error:
-          'Could not cancel order.'
-      });
-    }
-  }
-);
-
-
-/* =========================================================
-   MARK ORDER READY
-   ========================================================= */
-
-app.patch(
-  '/api/orders/:id/ready',
-  async (req, res) => {
-
-    try {
-
-      const order =
-        await Order.findById(
-          req.params.id
-        );
-
-      if (!order) {
-
-        return res.status(404).json({
-          error:
-            'Order not found.'
-        });
-      }
-
-
-      if (
-        order.status !==
-        'accepted'
-      ) {
-
-        return res.status(400).json({
-          error:
-            'Only accepted orders can be marked ready.'
-        });
-      }
-
-
-      order.status =
-        'ready';
-
-      order.readyAt =
-        new Date();
-
-      await order.save();
-
-      res.json(order);
-
-    } catch (err) {
-
-      res.status(500).json({
-        error:
-          'Could not mark order ready.'
-      });
-    }
-  }
-);
-
-
-/* =========================================================
-   BUYER CONFIRMS PICKUP
-   ========================================================= */
-
-app.patch(
-  '/api/orders/:id/picked-up',
-  async (req, res) => {
-
-    try {
-
-      const order =
-        await Order.findById(
-          req.params.id
-        );
-
-      if (!order) {
-
-        return res.status(404).json({
-          error:
-            'Order not found.'
-        });
-      }
-
-
-      if (
-        ![
-          'accepted',
-          'ready'
-        ].includes(
-          order.status
-        )
-      ) {
-
-        return res.status(400).json({
-          error:
-            'This order cannot be marked as picked up.'
-        });
-      }
-
-
-      order.status =
-        'picked_up';
-
-      order.pickedUpAt =
-        new Date();
-
-      await order.save();
-
-      res.json(order);
-
-    } catch (err) {
-
-      res.status(500).json({
-        error:
-          'Could not mark order as picked up.'
-      });
-    }
-  }
-);
-
-
-/* =========================================================
-   COMPLETE ORDER
-   ========================================================= */
-
-app.patch(
-  '/api/orders/:id/complete',
-  async (req, res) => {
-
-    try {
-
-      const order =
-        await Order.findById(
-          req.params.id
-        );
-
-      if (!order) {
-
-        return res.status(404).json({
-          error:
-            'Order not found.'
-        });
-      }
-
-
-      if (
-        order.status !==
-        'picked_up'
-      ) {
-
-        return res.status(400).json({
-          error:
-            'Order must be picked up first.'
-        });
-      }
-
-
-      order.status =
-        'completed';
-
-      order.completedAt =
-        new Date();
-
-      await order.save();
-
-      res.json(order);
-
-    } catch (err) {
-
-      res.status(500).json({
-        error:
-          'Could not complete order.'
-      });
-    }
-  }
-);
-
-
-/* =========================================================
-   BUYER CANCEL
-   ========================================================= */
-
-app.delete(
-  '/api/orders/:id',
-  async (req, res) => {
-
-    try {
-
-      const order =
-        await Order.findById(
-          req.params.id
-        );
-
-      if (!order) {
-
-        return res.status(404).json({
-          error:
-            'Order not found.'
-        });
-      }
-
-
-      if (
-        ![
-          'pending',
-          'accepted'
-        ].includes(
-          order.status
-        )
-      ) {
-
-        return res.status(400).json({
-          error:
-            'This order cannot be cancelled.'
-        });
-      }
-
-
-      const slot =
-        await Slot.findById(
-          order.slotId
-        );
-
-
-      if (!slot) {
-
-        return res.status(404).json({
-          error:
-            'Meal listing not found.'
-        });
-      }
-
-
-      if (
-        new Date(
-          slot.cutoffTime
-        ) <= new Date()
-      ) {
-
-        return res.status(400).json({
-          error:
-            'Cannot cancel — the ordering window has closed.'
-        });
-      }
-
-
-      const minutesSinceOrder =
-        (
-          Date.now() -
-          new Date(
-            order.createdAt
-          ).getTime()
-        ) / 60000;
-
-
-      let refundPolicy =
-        'full';
-
-      if (
-        minutesSinceOrder > 30
-      ) {
-
-        refundPolicy =
-          'none';
-
-      } else if (
-        minutesSinceOrder > 10
-      ) {
-
-        refundPolicy =
-          'half';
-      }
-
-
-      /*
-       * Release the reserved portions.
-       */
-      slot.ordersCount =
-        Math.max(
-          0,
-          slot.ordersCount -
-          order.quantity
-        );
-
-      await slot.save();
-
-
-      order.status =
-        'cancelled_by_buyer';
-
-      order.cancelledAt =
-        new Date();
-
-      await order.save();
-
-
-      res.json({
-
-        success: true,
-
-        refundPolicy,
-
-        minutesSinceOrder:
-          Math.round(
-            minutesSinceOrder
-          )
-      });
-
-    } catch (err) {
-
-      console.error(
-        'Buyer cancel error:',
-        err
-      );
-
-      res.status(500).json({
-        error:
-          'Could not cancel order.'
-      });
-    }
-  }
-);
-
-
-/* =========================================================
-   COUNTDOWN
-   ========================================================= */
-
-app.get(
-  '/api/slots/:id/countdown',
-  async (req, res) => {
-
-    try {
-
-      const slot =
-        await Slot.findById(
-          req.params.id
-        );
-
-      if (!slot) {
-
-        return res.status(404).json({
-          error:
-            'Meal listing not found.'
-        });
-      }
-
-
-      const remaining =
-        new Date(
-          slot.cutoffTime
-        ) - new Date();
-
-
-      res.json({
-
-        slotId:
-          slot._id,
-
-        isOpen:
-          remaining > 0,
-
-        minutesRemaining:
-          Math.max(
-            0,
-            Math.floor(
-              remaining / 60000
-            )
-          )
-      });
-
-    } catch (err) {
-
-      res.status(500).json({
-        error:
-          'Could not get countdown.'
-      });
-    }
-  }
-);
-
-
-/* =========================================================
-   HEALTH CHECK
-   ========================================================= */
-
-app.get(
-  '/',
-  (req, res) => {
-    res.send(
-      'FoodTime backend is running!'
-    );
-  }
-);
-
-
-/* =========================================================
-   START SERVER
-   ========================================================= */
-
-const PORT =
-  process.env.PORT || 3000;
-
-app.listen(
-  PORT,
-  () => {
-    console.log(
-      `FoodTime server running on port ${PORT}`
-    );
-  }
-);
+    parent
+      .querySelectorAll('.subtab-btn')
+      .forEach(b =>
+ 
