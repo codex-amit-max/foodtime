@@ -819,8 +819,7 @@ app.get('/api/orders/buyer/:buyerName', async (req, res) => {
 
     res.status(500).json({
       error: err.message
-    });
-  }
+    })const
 });
 
 
@@ -1356,9 +1355,34 @@ app.get('/api/slots/:id/countdown', async (req, res) => {
 
 
 /* =========================================================
-   START SERVER
-   ========================================================= */
+app.get('/api/slots/:id', async (req, res) => {
+  try {
+    const slot = await Slot.findById(req.params.id);
 
+    if (!slot) {
+      return res.status(404).json({
+        error: 'Menu not found'
+      });
+    }
+
+    const acceptedOrderExists =
+      await slotHasAcceptedOrder(slot._id);
+
+    res.json({
+      ...slot.toObject(),
+      hasAcceptedOrders: acceptedOrderExists,
+      status: isSlotOpen(slot) ? 'open' : 'locked'
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});   START SERVER
+   ========================================================= */
+const
 const PORT =
   process.env.PORT || 3000;
 
