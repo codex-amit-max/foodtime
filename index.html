@@ -1312,6 +1312,21 @@ label {
 
 
 <!-- =========================================================
+     DEFENSE RESPONSE MODAL
+========================================================= -->
+<div class="modal-overlay" id="defense-modal">
+  <div class="modal">
+    <h3>Respond to a Negative Rating</h3>
+    <div class="modal-text" id="defense-modal-subtext">You have one opportunity to explain your side. Your response cannot be edited later.</div>
+    <textarea id="defense-response-input" placeholder="Explain what happened from your perspective..."></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="cancel-defense-btn">Cancel</button>
+      <button class="btn btn-secondary" id="confirm-defense-btn">Submit Response</button>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
      MENU EDIT MODAL
 ========================================================= -->
 
@@ -2841,6 +2856,14 @@ async function loadMyOrders() {
 
       }
 
+      if (order.status === 'timed_out') {
+
+        statusLabel = 'Timed out';
+
+        badgeClass = 'badge-cancelled';
+
+      }
+
 
       const canCancel =
         slot.canCancel &&
@@ -3680,6 +3703,14 @@ function renderQueueCard(
 
     badgeClass =
       'badge-cancelled';
+
+  }
+
+  if (order.status === 'timed_out') {
+
+    statusLabel = 'Timed out';
+
+    badgeClass = 'badge-cancelled';
 
   }
 
@@ -5195,16 +5226,15 @@ function classifyOrder(order) {
   if (
     order.status === 'rejected' ||
     order.status === 'cancelled_by_buyer' ||
-    order.status === 'cancelled_by_seller'
+    order.status === 'cancelled_by_seller' ||
+    order.status === 'timed_out'
   ) {
     return 'closed';
   }
 
   if (order.status === 'accepted') {
     const mealTime = order.slot ? new Date(order.slot.mealTime) : null;
-    if (mealTime && mealTime <= new Date()) {
-      return 'completed';
-    }
+    if (mealTime && mealTime <= new Date()) return 'completed';
   }
 
   return 'active';
@@ -5402,162 +5432,108 @@ async function loadSellerReputation(sellerName) {
 
 
 /* =========================================================
-   RATING SLOTS (buttons that open the rating modal)
+   BLIND MUTUAL RATINGS + DEFENSE
 ========================================================= */
 
-async function renderBuyerRatingSlot(order, slot, buyerName) {
-  const el = document.getElementById('rate-slot-' + order._id);
+async function getOrderRatings(orderId) {
+  const response = await fetch(`${API_BASE}/api/ratings/order/${orderId}`);
+  if (!response.ok) return [];
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+}
+
+function ratingSummaryHtml(rating, currentName) {
+  const negative = Number(rating.overall) < 3;
+  const defense = rating.defenseResponse
+    ? `<div class="order-detail-row"><span>Response</span><span>${escapeHtml(rating.defenseResponse)}</span></div>`
+    : (negative && rating.ratedName === currentName
+      ? `<button class="btn btn-warning" onclick="openDefenseModal('${rating._id}')">🛡 Respond to this rating</button>`
+      : '');
+  return `
+    <div class="seller-action-box" style="margin-top:10px;">
+      <div class="seller-action-title">${rating.raterRole === 'buyer' ? 'Buyer rating' : 'Seller rating'}</div>
+      <div style="font-size:18px;font-weight:700;">⭐ ${Number(rating.overall).toFixed(1)} / 5</div>
+      ${rating.comment ? `<div class="edit-note">“${escapeHtml(rating.comment)}”</div>` : ''}
+      ${defense}
+    </div>`;
+}
+
+async function renderMutualRatingSlot(order, slot, myRole, myName, targetName, elementId) {
+  const el = document.getElementById(elementId);
   if (!el) return;
-
   try {
-    const response = await fetch(`${API_BASE}/api/ratings/order/${order._id}`);
-    const ratings = await response.json();
-    const alreadyRated = Array.isArray(ratings) && ratings.some(
-      r => r.raterRole === 'buyer' && r.raterName === buyerName
-    );
-
-    if (alreadyRated) {
-      el.innerHTML = `<p style="font-size:12.5px;color:var(--leaf-deep);font-weight:600;margin-top:8px;">✓ You rated this meal</p>`;
-    } else {
-      el.innerHTML = `
-        <button class="btn btn-secondary" onclick="openRatingModal('${order._id}','buyer','${encodeURIComponent(buyerName)}','${encodeURIComponent(slot.sellerName)}')">
-          ⭐ Rate this meal
-        </button>
-      `;
+    const ratings = await getOrderRatings(order._id);
+    const mine = ratings.find(r => r.raterRole === myRole);
+    const revealed = ratings.some(r => r.revealed === true);
+    if (!mine) {
+      el.innerHTML = `<button class="btn btn-secondary" onclick="openRatingModal('${order._id}','${myRole}','${encodeURIComponent(myName)}','${encodeURIComponent(targetName)}')">⭐ Rate ${myRole === 'buyer' ? 'this meal' : 'this buyer'}</button>`;
+      return;
     }
-  } catch (err) {
-    el.innerHTML = '';
-  }
+    if (!revealed) {
+      el.innerHTML = `<p style="font-size:12.5px;color:var(--leaf-deep);font-weight:600;margin-top:8px;">✓ Your rating is submitted. It will be revealed when the other party rates too.</p>`;
+      return;
+    }
+    const visibleRatings = ratings.filter(r => r.revealed);
+    el.innerHTML = visibleRatings.map(r => ratingSummaryHtml(r, myName)).join('');
+  } catch (err) { el.innerHTML = ''; }
+}
+
+async function renderBuyerRatingSlot(order, slot, buyerName) {
+  await renderMutualRatingSlot(order, slot, 'buyer', buyerName, slot.sellerName, 'rate-slot-' + order._id);
 }
 
 async function renderSellerRatingSlot(order, slot, sellerName) {
-  const el = document.getElementById('rate-seller-slot-' + order._id);
-  if (!el) return;
-
-  try {
-    const response = await fetch(`${API_BASE}/api/ratings/order/${order._id}`);
-    const ratings = await response.json();
-    const alreadyRated = Array.isArray(ratings) && ratings.some(
-      r => r.raterRole === 'seller' && r.raterName === sellerName
-    );
-
-    if (alreadyRated) {
-      el.innerHTML = `<p style="font-size:12.5px;color:var(--leaf-deep);font-weight:600;margin-top:8px;">✓ You rated this buyer</p>`;
-    } else {
-      el.innerHTML = `
-        <button class="btn btn-secondary" onclick="openRatingModal('${order._id}','seller','${encodeURIComponent(sellerName)}','${encodeURIComponent(order.buyerName)}')">
-          ⭐ Rate this buyer
-        </button>
-      `;
-    }
-  } catch (err) {
-    el.innerHTML = '';
-  }
+  await renderMutualRatingSlot(order, slot, 'seller', sellerName, order.buyerName, 'rate-seller-slot-' + order._id);
 }
 
-
-/* =========================================================
-   RATING MODAL
-========================================================= */
-
 const BUYER_RATING_CATEGORIES = [
-  ['taste', 'Taste'],
-  ['hygiene', 'Hygiene'],
-  ['quantity', 'Quantity'],
-  ['packaging', 'Packaging'],
-  ['reliability', 'Reliability']
+  ['taste', 'Taste'], ['hygiene', 'Hygiene'], ['quantity', 'Quantity'], ['packaging', 'Packaging'], ['reliability', 'Reliability']
 ];
-
 const SELLER_RATING_CATEGORIES = [
-  ['paymentReliability', 'Payment Reliability'],
-  ['pickupReliability', 'Pickup Reliability'],
-  ['communication', 'Communication'],
-  ['cancellationBehaviour', 'Cancellation Behaviour']
+  ['paymentReliability', 'Payment Reliability'], ['pickupReliability', 'Pickup Reliability'], ['communication', 'Communication'], ['cancellationBehaviour', 'Cancellation Behaviour']
 ];
-
-let currentRatingOrderId = null;
-let currentRaterRole = null;
-let currentRaterName = null;
-let currentRatedName = null;
+let currentRatingOrderId = null, currentRaterRole = null, currentRaterName = null, currentRatedName = null;
+let currentDefenseRatingId = null;
 
 function openRatingModal(orderId, raterRole, raterNameEnc, ratedNameEnc) {
-  currentRatingOrderId = orderId;
-  currentRaterRole = raterRole;
-  currentRaterName = decodeURIComponent(raterNameEnc);
-  currentRatedName = decodeURIComponent(ratedNameEnc);
-
+  currentRatingOrderId = orderId; currentRaterRole = raterRole; currentRaterName = decodeURIComponent(raterNameEnc); currentRatedName = decodeURIComponent(ratedNameEnc);
   const categories = raterRole === 'buyer' ? BUYER_RATING_CATEGORIES : SELLER_RATING_CATEGORIES;
-
-  document.getElementById('rating-modal-title').textContent =
-    raterRole === 'buyer' ? `Rate ${currentRatedName}` : `Rate ${currentRatedName}`;
-
-  document.getElementById('rating-modal-subtext').textContent =
-    'Rate each category from 1 (poor) to 5 (excellent).';
-
-  document.getElementById('rating-fields').innerHTML = categories.map(([key, label]) => `
-    <label>${label}</label>
-    <select id="rating-field-${key}">
-      <option value="5">5 - Excellent</option>
-      <option value="4">4 - Good</option>
-      <option value="3">3 - Okay</option>
-      <option value="2">2 - Poor</option>
-      <option value="1">1 - Very Poor</option>
-    </select>
-  `).join('');
-
+  document.getElementById('rating-modal-title').textContent = `Rate ${currentRatedName}`;
+  document.getElementById('rating-modal-subtext').textContent = 'Your rating stays private until both parties submit their ratings.';
+  document.getElementById('rating-fields').innerHTML = categories.map(([key,label]) => `<label>${label}</label><select id="rating-field-${key}"><option value="5">5 - Excellent</option><option value="4">4 - Good</option><option value="3">3 - Okay</option><option value="2">2 - Poor</option><option value="1">1 - Very Poor</option></select>`).join('');
   document.getElementById('rating-comment').value = '';
   document.getElementById('rating-modal').classList.add('show');
 }
 
-document.getElementById('cancel-rating-btn').addEventListener('click', () => {
-  document.getElementById('rating-modal').classList.remove('show');
-});
-
+document.getElementById('cancel-rating-btn').addEventListener('click', () => document.getElementById('rating-modal').classList.remove('show'));
 document.getElementById('confirm-rating-btn').addEventListener('click', async () => {
   const categories = currentRaterRole === 'buyer' ? BUYER_RATING_CATEGORIES : SELLER_RATING_CATEGORIES;
-  const scores = {};
-  categories.forEach(([key]) => {
-    const field = document.getElementById('rating-field-' + key);
-    if (field) scores[key] = Number(field.value);
-  });
-
-  const comment = document.getElementById('rating-comment').value.trim();
-
+  const scores = {}; categories.forEach(([key]) => { const field=document.getElementById('rating-field-'+key); if(field) scores[key]=Number(field.value); });
+  const comment=document.getElementById('rating-comment').value.trim();
   try {
-    const response = await fetch(`${API_BASE}/api/ratings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        orderId: currentRatingOrderId,
-        raterRole: currentRaterRole,
-        raterName: currentRaterName,
-        ratedName: currentRatedName,
-        scores,
-        comment
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      showToast(data.error || 'Could not submit rating');
-      return;
-    }
-
-    showToast('Thank you for your rating!');
+    const response=await fetch(`${API_BASE}/api/ratings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId:currentRatingOrderId,raterRole:currentRaterRole,raterName:currentRaterName,scores,comment})});
+    const data=await response.json(); if(!response.ok){showToast(data.error||'Could not submit rating');return;}
     document.getElementById('rating-modal').classList.remove('show');
-
-    if (currentRaterRole === 'buyer') {
-      loadMyOrders();
-    } else {
-      const nameField = document.getElementById('o-name');
-      if (nameField) loadSellerQueue(nameField.value.trim());
-    }
-  } catch (err) {
-    showToast('Network error — please try again');
-  }
+    showToast(data.revealed ? 'Both ratings are now revealed.' : 'Rating submitted. It will be revealed when the other party rates too.');
+    if(currentRaterRole==='buyer') loadMyOrders(); else { const n=document.getElementById('o-name'); if(n) loadSellerQueue(n.value.trim()); }
+  } catch(err){showToast('Network error — please try again');}
 });
 
+function openDefenseModal(ratingId) {
+  currentDefenseRatingId = ratingId;
+  document.getElementById('defense-response-input').value = '';
+  document.getElementById('defense-modal').classList.add('show');
+}
+document.getElementById('cancel-defense-btn').addEventListener('click',()=>document.getElementById('defense-modal').classList.remove('show'));
+document.getElementById('confirm-defense-btn').addEventListener('click',async()=>{
+  const responseText=document.getElementById('defense-response-input').value.trim();
+  const nameField=document.getElementById('mo-name');
+  const sellerField=document.getElementById('o-name');
+  const responderName=(nameField?.value.trim()||sellerField?.value.trim());
+  if(!responseText)return showToast('Please explain what happened.');
+  if(!responderName)return showToast('Enter your name first.');
+  try{const r=await fetch(`${API_BASE}/api/ratings/${currentDefenseRatingId}/defend`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({response:responseText,responderName})});const d=await r.json();if(!r.ok)return showToast(d.error||'Could not submit response');document.getElementById('defense-modal').classList.remove('show');showToast('Your response has been submitted.');if(nameField?.value.trim())loadMyOrders();if(sellerField?.value.trim())loadSellerQueue(sellerField.value.trim());}catch(err){showToast('Network error — please try again');}
+});
 
 /* =========================================================
    INITIAL LOAD
