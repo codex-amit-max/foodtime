@@ -346,7 +346,7 @@ app.get('/api/slots/seller/:sellerName', async (req, res) => {
         return {
           ...slot.toObject(),
 
-          hasAcceptedOrder: !!acceptedOrder,
+          hasAcceptedOrders: !!acceptedOrder,
 
           hasPendingOrders: pendingOrders > 0,
 
@@ -402,8 +402,7 @@ app.get('/api/slots/seller/:sellerName', async (req, res) => {
    Everything else is rejected by the server.
    ========================================================= */
 
-app.patch('/api/slots/:id', async (req, res) => {
-  try {
+app.patch('/api/slots/:id', async (req, res) => {try {
 
     const slot = await Slot.findById(req.params.id);
 
@@ -819,7 +818,8 @@ app.get('/api/orders/buyer/:buyerName', async (req, res) => {
 
     res.status(500).json({
       error: err.message
-    })const
+    });
+  }
 });
 
 
@@ -1035,6 +1035,7 @@ app.patch('/api/orders/:id/reject', async (req, res) => {
     });
   }
 });
+
 /* =========================================================
    SELLER CANCEL ORDER
    ========================================================= */
@@ -1355,6 +1356,9 @@ app.get('/api/slots/:id/countdown', async (req, res) => {
 
 
 /* =========================================================
+   GET SINGLE MENU
+   ========================================================= */
+
 app.get('/api/slots/:id', async (req, res) => {
   try {
     const slot = await Slot.findById(req.params.id);
@@ -1380,9 +1384,13 @@ app.get('/api/slots/:id', async (req, res) => {
       error: err.message
     });
   }
-});   START SERVER
+});
+
+
+/* =========================================================
+   START SERVER
    ========================================================= */
-const
+
 const PORT =
   process.env.PORT || 3000;
 
