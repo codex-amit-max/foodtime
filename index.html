@@ -1906,8 +1906,12 @@ async function loadFeed() {
     }
 
 
-    const slots =
+    const rawSlots =
       await response.json();
+
+    const slots = Array.isArray(rawSlots)
+      ? rawSlots.filter(slot => slot.status === 'open')
+      : [];
 
 
     if (!Array.isArray(slots) || slots.length === 0) {
