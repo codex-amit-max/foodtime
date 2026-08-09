@@ -926,6 +926,14 @@ label {
       View My Orders
     </button>
 
+    <div id="buyer-notif-panel" style="margin-top:14px;"></div>
+
+    <div class="subtabs" style="margin-top:16px;">
+      <button class="subtab-btn active" id="btn-buyer-orders-active" data-orderfilter="active">Active</button>
+      <button class="subtab-btn" id="btn-buyer-orders-completed" data-orderfilter="completed">Completed</button>
+      <button class="subtab-btn" id="btn-buyer-orders-closed" data-orderfilter="closed">Closed</button>
+    </div>
+
     <div
       id="my-orders-list"
       style="margin-top:16px;"
@@ -1130,6 +1138,16 @@ label {
       View My Order Queue
     </button>
 
+    <div id="seller-notif-panel" style="margin-top:14px;"></div>
+
+    <div id="seller-reputation-panel" style="margin-top:14px;"></div>
+
+    <div class="subtabs" style="margin-top:16px;">
+      <button class="subtab-btn active" id="btn-seller-orders-active" data-orderfilter="active">Active</button>
+      <button class="subtab-btn" id="btn-seller-orders-completed" data-orderfilter="completed">Completed</button>
+      <button class="subtab-btn" id="btn-seller-orders-closed" data-orderfilter="closed">Closed</button>
+    </div>
+
 
     <div
       class="section-label"
@@ -1237,6 +1255,52 @@ label {
         id="confirm-reject-btn"
       >
         Reject Order
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<!-- =========================================================
+     RATING MODAL
+========================================================= -->
+
+<div
+  class="modal-overlay"
+  id="rating-modal"
+>
+
+  <div class="modal">
+
+    <h3 id="rating-modal-title">Rate this meal</h3>
+
+    <div class="modal-text" id="rating-modal-subtext"></div>
+
+    <div id="rating-fields"></div>
+
+    <textarea
+      id="rating-comment"
+      placeholder="Any comments? (optional)"
+    ></textarea>
+
+    <div class="modal-actions">
+
+      <button
+        class="btn btn-danger"
+        id="cancel-rating-btn"
+      >
+        Cancel
+      </button>
+
+      <button
+        class="btn btn-primary"
+        id="confirm-rating-btn"
+      >
+        Submit Rating
       </button>
 
     </div>
@@ -2793,6 +2857,9 @@ async function loadMyOrders() {
       div.className =
         'card';
 
+      const orderClass = classifyOrder(order);
+      div.dataset.orderclass = orderClass;
+
 
       div.innerHTML = `
 
@@ -2913,6 +2980,16 @@ async function loadMyOrders() {
 
 
         ${
+          orderClass === 'completed'
+
+          ? `
+            <div id="rate-slot-${order._id}"></div>
+          `
+          : ''
+        }
+
+
+        ${
           slot.sellerPhone
 
           ? `
@@ -2946,7 +3023,14 @@ async function loadMyOrders() {
 
       container.appendChild(div);
 
+      if (orderClass === 'completed') {
+        renderBuyerRatingSlot(order, slot, name);
+      }
+
     });
+
+    applyBuyerOrderFilter(buyerOrderFilter);
+    loadBuyerNotifications(name);
 
 
   } catch (error) {
@@ -3476,16 +3560,26 @@ async function loadSellerQueue(
 
       if (order.slot) {
 
-        container.appendChild(
-          renderQueueCard(
-            order,
-            sellerName
-          )
+        const card = renderQueueCard(
+          order,
+          sellerName
         );
+
+        card.dataset.orderclass = classifyOrder(order);
+
+        container.appendChild(card);
+
+        if (card.dataset.orderclass === 'completed') {
+          renderSellerRatingSlot(order, order.slot, sellerName);
+        }
 
       }
 
     });
+
+    applySellerOrderFilter(sellerOrderFilter);
+    loadSellerNotifications(sellerName);
+    loadSellerReputation(sellerName);
 
 
   } catch (error) {
@@ -3810,6 +3904,8 @@ function renderQueueCard(
       `
       : ''
     }
+
+    <div id="rate-seller-slot-${order._id}"></div>
 
   `;
 
@@ -5089,6 +5185,378 @@ async function saveMenuEdit() {
       iso;
 
 })();
+
+
+/* =========================================================
+   ORDER CLASSIFICATION (active / completed / closed)
+========================================================= */
+
+function classifyOrder(order) {
+  if (
+    order.status === 'rejected' ||
+    order.status === 'cancelled_by_buyer' ||
+    order.status === 'cancelled_by_seller'
+  ) {
+    return 'closed';
+  }
+
+  if (order.status === 'accepted') {
+    const mealTime = order.slot ? new Date(order.slot.mealTime) : null;
+    if (mealTime && mealTime <= new Date()) {
+      return 'completed';
+    }
+  }
+
+  return 'active';
+}
+
+
+/* =========================================================
+   BUYER ORDER TABS
+========================================================= */
+
+let buyerOrderFilter = 'active';
+
+function applyBuyerOrderFilter(filter) {
+  buyerOrderFilter = filter;
+
+  const cards = document.querySelectorAll('#my-orders-list .card');
+  let visibleCount = 0;
+
+  cards.forEach(card => {
+    if (card.dataset.orderclass === filter) {
+      card.style.display = '';
+      visibleCount++;
+    } else {
+      card.style.display = 'none';
+    }
+  });
+
+  const container = document.getElementById('my-orders-list');
+  const existingEmpty = container.querySelector('.filter-empty');
+  if (existingEmpty) existingEmpty.remove();
+
+  if (visibleCount === 0 && cards.length > 0) {
+    const msg = document.createElement('div');
+    msg.className = 'empty filter-empty';
+    msg.innerHTML = `<p>No ${filter} orders.</p>`;
+    container.appendChild(msg);
+  }
+}
+
+['active', 'completed', 'closed'].forEach(filter => {
+  const btn = document.getElementById('btn-buyer-orders-' + filter);
+  if (btn) {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#sub-myorders .subtab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyBuyerOrderFilter(filter);
+    });
+  }
+});
+
+
+/* =========================================================
+   SELLER ORDER TABS
+========================================================= */
+
+let sellerOrderFilter = 'active';
+
+function applySellerOrderFilter(filter) {
+  sellerOrderFilter = filter;
+
+  const cards = document.querySelectorAll('#seller-queue .card');
+  let visibleCount = 0;
+
+  cards.forEach(card => {
+    if (card.dataset.orderclass === filter) {
+      card.style.display = '';
+      visibleCount++;
+    } else {
+      card.style.display = 'none';
+    }
+  });
+
+  const container = document.getElementById('seller-queue');
+  const existingEmpty = container.querySelector('.filter-empty');
+  if (existingEmpty) existingEmpty.remove();
+
+  if (visibleCount === 0 && cards.length > 0) {
+    const msg = document.createElement('div');
+    msg.className = 'empty filter-empty';
+    msg.innerHTML = `<p>No ${filter} orders.</p>`;
+    container.appendChild(msg);
+  }
+}
+
+['active', 'completed', 'closed'].forEach(filter => {
+  const btn = document.getElementById('btn-seller-orders-' + filter);
+  if (btn) {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#sub-orders .subtab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applySellerOrderFilter(filter);
+    });
+  }
+});
+
+
+/* =========================================================
+   NOTIFICATIONS
+========================================================= */
+
+async function loadBuyerNotifications(name) {
+  await loadNotifications('buyer', name, 'buyer-notif-panel');
+}
+
+async function loadSellerNotifications(name) {
+  await loadNotifications('seller', name, 'seller-notif-panel');
+}
+
+async function loadNotifications(role, name, panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/notifications/${role}/${encodeURIComponent(name)}`
+    );
+    const notifications = await response.json();
+
+    if (!Array.isArray(notifications) || !notifications.length) {
+      panel.innerHTML = '';
+      return;
+    }
+
+    const unreadCount = notifications.filter(n => !n.read).length;
+
+    panel.innerHTML = `
+      <div class="card" style="background:var(--ivory-dim);">
+        <div class="card-top">
+          <h3 class="seller-name" style="font-size:15px;">
+            🔔 Notifications ${unreadCount > 0 ? `(${unreadCount} new)` : ''}
+          </h3>
+        </div>
+        ${notifications.slice(0, 8).map(n => `
+          <div class="order-detail-row">
+            <span style="${n.read ? 'color:var(--ink-soft);' : 'font-weight:700;'}">
+              ${escapeHtml(n.message)}
+            </span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    if (unreadCount > 0) {
+      fetch(
+        `${API_BASE}/api/notifications/${role}/${encodeURIComponent(name)}/read-all`,
+        { method: 'PATCH' }
+      ).catch(() => {});
+    }
+  } catch (err) {
+    panel.innerHTML = '';
+  }
+}
+
+
+/* =========================================================
+   SELLER REPUTATION PANEL
+========================================================= */
+
+async function loadSellerReputation(sellerName) {
+  const panel = document.getElementById('seller-reputation-panel');
+  if (!panel) return;
+
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/reputation/seller/${encodeURIComponent(sellerName)}`
+    );
+    const rep = await response.json();
+
+    if (!rep || rep.totalRatings === 0) {
+      panel.innerHTML = `
+        <div class="card">
+          <p style="font-size:13px;color:var(--ink-soft);margin:0;">
+            No ratings yet. Once buyers rate completed meals, your reputation will show here.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    panel.innerHTML = `
+      <div class="card">
+        <div class="card-top">
+          <h3 class="seller-name" style="font-size:16px;">${escapeHtml(rep.title)}</h3>
+          <span class="badge-accepted">⭐ ${rep.overallRating} / 5</span>
+        </div>
+        <p style="font-size:13px;color:var(--ink-soft);margin:6px 0 0;">
+          ${rep.mealsCompleted} meals completed · ${rep.totalRatings} ratings
+        </p>
+      </div>
+    `;
+  } catch (err) {
+    panel.innerHTML = '';
+  }
+}
+
+
+/* =========================================================
+   RATING SLOTS (buttons that open the rating modal)
+========================================================= */
+
+async function renderBuyerRatingSlot(order, slot, buyerName) {
+  const el = document.getElementById('rate-slot-' + order._id);
+  if (!el) return;
+
+  try {
+    const response = await fetch(`${API_BASE}/api/ratings/order/${order._id}`);
+    const ratings = await response.json();
+    const alreadyRated = Array.isArray(ratings) && ratings.some(
+      r => r.raterRole === 'buyer' && r.raterName === buyerName
+    );
+
+    if (alreadyRated) {
+      el.innerHTML = `<p style="font-size:12.5px;color:var(--leaf-deep);font-weight:600;margin-top:8px;">✓ You rated this meal</p>`;
+    } else {
+      el.innerHTML = `
+        <button class="btn btn-secondary" onclick="openRatingModal('${order._id}','buyer','${encodeURIComponent(buyerName)}','${encodeURIComponent(slot.sellerName)}')">
+          ⭐ Rate this meal
+        </button>
+      `;
+    }
+  } catch (err) {
+    el.innerHTML = '';
+  }
+}
+
+async function renderSellerRatingSlot(order, slot, sellerName) {
+  const el = document.getElementById('rate-seller-slot-' + order._id);
+  if (!el) return;
+
+  try {
+    const response = await fetch(`${API_BASE}/api/ratings/order/${order._id}`);
+    const ratings = await response.json();
+    const alreadyRated = Array.isArray(ratings) && ratings.some(
+      r => r.raterRole === 'seller' && r.raterName === sellerName
+    );
+
+    if (alreadyRated) {
+      el.innerHTML = `<p style="font-size:12.5px;color:var(--leaf-deep);font-weight:600;margin-top:8px;">✓ You rated this buyer</p>`;
+    } else {
+      el.innerHTML = `
+        <button class="btn btn-secondary" onclick="openRatingModal('${order._id}','seller','${encodeURIComponent(sellerName)}','${encodeURIComponent(order.buyerName)}')">
+          ⭐ Rate this buyer
+        </button>
+      `;
+    }
+  } catch (err) {
+    el.innerHTML = '';
+  }
+}
+
+
+/* =========================================================
+   RATING MODAL
+========================================================= */
+
+const BUYER_RATING_CATEGORIES = [
+  ['taste', 'Taste'],
+  ['hygiene', 'Hygiene'],
+  ['quantity', 'Quantity'],
+  ['packaging', 'Packaging'],
+  ['reliability', 'Reliability']
+];
+
+const SELLER_RATING_CATEGORIES = [
+  ['paymentReliability', 'Payment Reliability'],
+  ['pickupReliability', 'Pickup Reliability'],
+  ['communication', 'Communication'],
+  ['cancellationBehaviour', 'Cancellation Behaviour']
+];
+
+let currentRatingOrderId = null;
+let currentRaterRole = null;
+let currentRaterName = null;
+let currentRatedName = null;
+
+function openRatingModal(orderId, raterRole, raterNameEnc, ratedNameEnc) {
+  currentRatingOrderId = orderId;
+  currentRaterRole = raterRole;
+  currentRaterName = decodeURIComponent(raterNameEnc);
+  currentRatedName = decodeURIComponent(ratedNameEnc);
+
+  const categories = raterRole === 'buyer' ? BUYER_RATING_CATEGORIES : SELLER_RATING_CATEGORIES;
+
+  document.getElementById('rating-modal-title').textContent =
+    raterRole === 'buyer' ? `Rate ${currentRatedName}` : `Rate ${currentRatedName}`;
+
+  document.getElementById('rating-modal-subtext').textContent =
+    'Rate each category from 1 (poor) to 5 (excellent).';
+
+  document.getElementById('rating-fields').innerHTML = categories.map(([key, label]) => `
+    <label>${label}</label>
+    <select id="rating-field-${key}">
+      <option value="5">5 - Excellent</option>
+      <option value="4">4 - Good</option>
+      <option value="3">3 - Okay</option>
+      <option value="2">2 - Poor</option>
+      <option value="1">1 - Very Poor</option>
+    </select>
+  `).join('');
+
+  document.getElementById('rating-comment').value = '';
+  document.getElementById('rating-modal').classList.add('show');
+}
+
+document.getElementById('cancel-rating-btn').addEventListener('click', () => {
+  document.getElementById('rating-modal').classList.remove('show');
+});
+
+document.getElementById('confirm-rating-btn').addEventListener('click', async () => {
+  const categories = currentRaterRole === 'buyer' ? BUYER_RATING_CATEGORIES : SELLER_RATING_CATEGORIES;
+  const scores = {};
+  categories.forEach(([key]) => {
+    const field = document.getElementById('rating-field-' + key);
+    if (field) scores[key] = Number(field.value);
+  });
+
+  const comment = document.getElementById('rating-comment').value.trim();
+
+  try {
+    const response = await fetch(`${API_BASE}/api/ratings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId: currentRatingOrderId,
+        raterRole: currentRaterRole,
+        raterName: currentRaterName,
+        ratedName: currentRatedName,
+        scores,
+        comment
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      showToast(data.error || 'Could not submit rating');
+      return;
+    }
+
+    showToast('Thank you for your rating!');
+    document.getElementById('rating-modal').classList.remove('show');
+
+    if (currentRaterRole === 'buyer') {
+      loadMyOrders();
+    } else {
+      const nameField = document.getElementById('o-name');
+      if (nameField) loadSellerQueue(nameField.value.trim());
+    }
+  } catch (err) {
+    showToast('Network error — please try again');
+  }
+});
 
 
 /* =========================================================
