@@ -72,8 +72,34 @@ const orderSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const notificationSchema = new mongoose.Schema({
+  recipientRole: { type: String, enum: ['buyer', 'seller'], required: true },
+  recipientName: { type: String, required: true },
+  message: { type: String, required: true },
+  orderId: mongoose.Schema.Types.ObjectId,
+  slotId: mongoose.Schema.Types.ObjectId,
+  read: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const ratingSchema = new mongoose.Schema({
+  orderId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  raterRole: { type: String, enum: ['buyer', 'seller'], required: true },
+  raterName: { type: String, required: true },
+  ratedName: { type: String, required: true },
+  scores: {
+    type: Map,
+    of: Number
+  },
+  overall: { type: Number, required: true },
+  comment: String,
+  createdAt: { type: Date, default: Date.now }
+});
+
 const Slot = mongoose.model('Slot', slotSchema);
 const Order = mongoose.model('Order', orderSchema);
+const Notification = mongoose.model('Notification', notificationSchema);
+const Rating = mongoose.model('Rating', ratingSchema);
 
 
 /* =========================================================
@@ -118,6 +144,37 @@ function isValidQuantity(value) {
   const number = Number(value);
 
   return Number.isInteger(number) && number > 0;
+}
+
+async function notify(recipientRole, recipientName, message, orderId, slotId) {
+  try {
+    await Notification.create({
+      recipientRole,
+      recipientName,
+      message,
+      orderId: orderId || null,
+      slotId: slotId || null
+    });
+  } catch (err) {
+    console.error('Notification create failed:', err.message);
+  }
+}
+
+function computeSellerTitle(completedCount, avgRating) {
+  if (completedCount >= 500 && avgRating >= 4.8) return 'Local Food Legend';
+  if (completedCount >= 100 && avgRating >= 4.5) return 'Neighbourhood Favourite';
+  if (completedCount >= 100) return 'Trusted Cook';
+  if (completedCount >= 25) return 'Community Cook';
+  if (completedCount >= 10) return 'New Cook';
+  return 'New Cook';
+}
+
+function computeBuyerTitle(completedCount, avgRating, cancellationRate) {
+  if (completedCount >= 100 && avgRating >= 4.8 && cancellationRate < 0.05) return 'Community Favourite';
+  if (completedCount >= 50 && avgRating >= 4.5) return 'Trusted Neighbour';
+  if (completedCount >= 25 && avgRating >= 4.2) return 'Reliable Neighbour';
+  if (completedCount >= 25) return 'Regular Neighbour';
+  return 'New Neighbour';
 }
 
 
@@ -376,8 +433,7 @@ app.get('/api/slots/seller/:sellerName', async (req, res) => {
     });
   }
 });
-
-
+```javascript
 /* =========================================================
    EDIT MENU
    =========================================================
@@ -402,7 +458,8 @@ app.get('/api/slots/seller/:sellerName', async (req, res) => {
    Everything else is rejected by the server.
    ========================================================= */
 
-app.patch('/api/slots/:id', async (req, res) => {try {
+app.patch('/api/slots/:id', async (req, res) => {
+  try {
 
     const slot = await Slot.findById(req.params.id);
 
@@ -740,6 +797,14 @@ app.post('/api/orders', async (req, res) => {
 
     await slot.save();
 
+    await notify(
+      'seller',
+      slot.sellerName,
+      `New order: ${buyerName.trim()} wants ${qty} portion(s) of "${slot.items}"`,
+      newOrder._id,
+      slot._id
+    );
+
     res.status(201).json(newOrder);
 
   } catch (err) {
@@ -751,8 +816,6 @@ app.post('/api/orders', async (req, res) => {
     });
   }
 });
-
-
 /* =========================================================
    BUYER ORDERS
    ========================================================= */
@@ -947,6 +1010,14 @@ app.patch('/api/orders/:id/accept', async (req, res) => {
 
     await order.save();
 
+    await notify(
+      'buyer',
+      order.buyerName,
+      `Your order for "${slot.items}" was accepted!`,
+      order._id,
+      slot._id
+    );
+
     res.json({
       success: true,
       message: 'Order accepted.',
@@ -1020,6 +1091,16 @@ app.patch('/api/orders/:id/reject', async (req, res) => {
 
     await order.save();
 
+    if (slot) {
+      await notify(
+        'buyer',
+        order.buyerName,
+        `Your order for "${slot.items}" was rejected. Reason: ${reason.trim()}`,
+        order._id,
+        slot._id
+      );
+    }
+
     res.json({
       success: true,
       message: 'Order rejected.',
@@ -1035,7 +1116,6 @@ app.patch('/api/orders/:id/reject', async (req, res) => {
     });
   }
 });
-
 /* =========================================================
    SELLER CANCEL ORDER
    ========================================================= */
@@ -1096,6 +1176,16 @@ app.patch('/api/orders/:id/seller-cancel', async (req, res) => {
 
     await order.save();
 
+    if (slot) {
+      await notify(
+        'buyer',
+        order.buyerName,
+        `Your order for "${slot.items}" was cancelled by the seller. Reason: ${reason.trim()}`,
+        order._id,
+        slot._id
+      );
+    }
+
     res.json({
       success: true,
       message: 'Order cancelled.',
@@ -1111,8 +1201,6 @@ app.patch('/api/orders/:id/seller-cancel', async (req, res) => {
     });
   }
 });
-
-
 /* =========================================================
    EDIT ORDER QUANTITY
    =========================================================
@@ -1291,6 +1379,14 @@ app.delete('/api/orders/:id', async (req, res) => {
 
     await order.save();
 
+    await notify(
+      'seller',
+      slot.sellerName,
+      `${order.buyerName} cancelled their order for "${slot.items}" (${refundPolicy} refund applies)`,
+      order._id,
+      slot._id
+    );
+
     res.json({
       success: true,
       refundPolicy,
@@ -1383,6 +1479,204 @@ app.get('/api/slots/:id', async (req, res) => {
     res.status(500).json({
       error: err.message
     });
+  }
+});
+
+
+/* =========================================================
+   NOTIFICATIONS
+   ========================================================= */
+
+app.get('/api/notifications/:role/:name', async (req, res) => {
+  try {
+    const { role, name } = req.params;
+    const notifications = await Notification.find({
+      recipientRole: role,
+      recipientName: name
+    }).sort({ createdAt: -1 }).limit(50);
+    res.json(notifications);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/notifications/:role/:name/unread-count', async (req, res) => {
+  try {
+    const { role, name } = req.params;
+    const count = await Notification.countDocuments({
+      recipientRole: role,
+      recipientName: name,
+      read: false
+    });
+    res.json({ count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/notifications/:id/read', async (req, res) => {
+  try {
+    await Notification.findByIdAndUpdate(req.params.id, { read: true });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/notifications/:role/:name/read-all', async (req, res) => {
+  try {
+    const { role, name } = req.params;
+    await Notification.updateMany(
+      { recipientRole: role, recipientName: name, read: false },
+      { read: true }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+/* =========================================================
+   RATINGS
+   ========================================================= */
+
+app.post('/api/ratings', async (req, res) => {
+  try {
+    const { orderId, raterRole, raterName, ratedName, scores, comment } = req.body;
+
+    if (!orderId || !raterRole || !raterName || !ratedName || !scores) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    if (order.status !== 'accepted') {
+      return res.status(400).json({ error: 'You can only rate completed orders' });
+    }
+
+    const slot = await Slot.findById(order.slotId);
+    if (!slot || new Date(slot.mealTime) > new Date()) {
+      return res.status(400).json({ error: 'This meal has not happened yet' });
+    }
+
+    const existing = await Rating.findOne({ orderId, raterRole, raterName });
+    if (existing) {
+      return res.status(400).json({ error: 'You already rated this order' });
+    }
+
+    const values = Object.values(scores).map(Number).filter(n => !isNaN(n));
+    if (!values.length) {
+      return res.status(400).json({ error: 'At least one rating score is required' });
+    }
+    const overall = values.reduce((a, b) => a + b, 0) / values.length;
+
+    const rating = new Rating({
+      orderId, raterRole, raterName, ratedName,
+      scores, overall,
+      comment: comment ? comment.trim() : null
+    });
+    await rating.save();
+
+    res.status(201).json(rating);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/ratings/order/:orderId', async (req, res) => {
+  try {
+    const ratings = await Rating.find({ orderId: req.params.orderId });
+    res.json(ratings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/reputation/seller/:sellerName', async (req, res) => {
+  try {
+    const sellerName = req.params.sellerName;
+    const ratings = await Rating.find({ raterRole: 'buyer', ratedName: sellerName });
+
+    const slots = await Slot.find({ sellerName });
+    const slotIds = slots.map(s => s._id);
+    const completedCount = await Order.countDocuments({
+      slotId: { $in: slotIds },
+      status: 'accepted'
+    });
+
+    const avgRating = ratings.length
+      ? ratings.reduce((sum, r) => sum + r.overall, 0) / ratings.length
+      : 0;
+
+    const categoryTotals = {};
+    ratings.forEach(r => {
+      const scoresObj = r.scores instanceof Map ? Object.fromEntries(r.scores) : r.scores;
+      Object.entries(scoresObj || {}).forEach(([key, val]) => {
+        if (!categoryTotals[key]) categoryTotals[key] = { sum: 0, count: 0 };
+        categoryTotals[key].sum += Number(val);
+        categoryTotals[key].count += 1;
+      });
+    });
+    const categoryAverages = {};
+    Object.entries(categoryTotals).forEach(([key, { sum, count }]) => {
+      categoryAverages[key] = Math.round((sum / count) * 10) / 10;
+    });
+
+    res.json({
+      name: sellerName,
+      title: computeSellerTitle(completedCount, avgRating),
+      overallRating: Math.round(avgRating * 10) / 10,
+      totalRatings: ratings.length,
+      mealsCompleted: completedCount,
+      categoryAverages
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/reputation/buyer/:buyerName', async (req, res) => {
+  try {
+    const buyerName = req.params.buyerName;
+    const ratings = await Rating.find({ raterRole: 'seller', ratedName: buyerName });
+
+    const allOrders = await Order.find({ buyerName });
+    const completedCount = allOrders.filter(o => o.status === 'accepted').length;
+    const cancelledCount = allOrders.filter(o => o.status === 'cancelled_by_buyer').length;
+    const cancellationRate = allOrders.length ? cancelledCount / allOrders.length : 0;
+
+    const avgRating = ratings.length
+      ? ratings.reduce((sum, r) => sum + r.overall, 0) / ratings.length
+      : 0;
+
+    const categoryTotals = {};
+    ratings.forEach(r => {
+      const scoresObj = r.scores instanceof Map ? Object.fromEntries(r.scores) : r.scores;
+      Object.entries(scoresObj || {}).forEach(([key, val]) => {
+        if (!categoryTotals[key]) categoryTotals[key] = { sum: 0, count: 0 };
+        categoryTotals[key].sum += Number(val);
+        categoryTotals[key].count += 1;
+      });
+    });
+    const categoryAverages = {};
+    Object.entries(categoryTotals).forEach(([key, { sum, count }]) => {
+      categoryAverages[key] = Math.round((sum / count) * 10) / 10;
+    });
+
+    res.json({
+      name: buyerName,
+      title: computeBuyerTitle(completedCount, avgRating, cancellationRate),
+      overallRating: Math.round(avgRating * 10) / 10,
+      totalRatings: ratings.length,
+      ordersCompleted: completedCount,
+      cancellationRate: Math.round(cancellationRate * 1000) / 10,
+      categoryAverages
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
