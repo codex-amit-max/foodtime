@@ -1326,6 +1326,17 @@ label {
   </div>
 </div>
 
+<div class="modal-overlay" id="reputation-modal">
+  <div class="modal">
+    <h3 id="reputation-modal-title">Reputation</h3>
+    <div class="modal-text" id="reputation-modal-subtitle"></div>
+    <div id="reputation-modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="close-reputation-btn" style="width:100%;">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- =========================================================
      MENU EDIT MODAL
 ========================================================= -->
@@ -1989,6 +2000,8 @@ function renderBuyerCard(slot) {
           ${escapeHtml(slot.sellerName)}
         </h3>
 
+        <div id="seller-rep-${slot._id}"></div>
+
       </div>
 
       <span class="${
@@ -2176,6 +2189,8 @@ function renderBuyerCard(slot) {
     slot.cutoffTime,
     isOpen
   );
+
+  renderReputationBadge('seller', slot.sellerName, 'seller-rep-' + slot._id);
 
 
   return div;
@@ -2856,9 +2871,9 @@ async function loadMyOrders() {
 
       }
 
-      if (order.status === 'timed_out') {
+      if (isOrderTimedOut(order)) {
 
-        statusLabel = 'Timed out';
+        statusLabel = 'Timed Out';
 
         badgeClass = 'badge-cancelled';
 
@@ -3714,9 +3729,19 @@ function renderQueueCard(
 
   }
 
+  const timedOut = isOrderTimedOut(order);
+
+  if (timedOut) {
+
+    statusLabel = 'Timed Out';
+
+    badgeClass = 'badge-cancelled';
+
+  }
+
 
   const isPending =
-    order.status === 'pending';
+    order.status === 'pending' && !timedOut;
 
 
   const isAccepted =
@@ -3741,6 +3766,8 @@ function renderQueueCard(
         <h3 class="seller-name">
           ${escapeHtml(order.buyerName)}
         </h3>
+
+        <div id="buyer-rep-${order._id}"></div>
 
       </div>
 
@@ -3939,6 +3966,8 @@ function renderQueueCard(
     <div id="rate-seller-slot-${order._id}"></div>
 
   `;
+
+  renderReputationBadge('buyer', order.buyerName, 'buyer-rep-' + order._id);
 
 
   return div;
@@ -5226,8 +5255,7 @@ function classifyOrder(order) {
   if (
     order.status === 'rejected' ||
     order.status === 'cancelled_by_buyer' ||
-    order.status === 'cancelled_by_seller' ||
-    order.status === 'timed_out'
+    order.status === 'cancelled_by_seller'
   ) {
     return 'closed';
   }
@@ -5237,7 +5265,18 @@ function classifyOrder(order) {
     if (mealTime && mealTime <= new Date()) return 'completed';
   }
 
+  if (order.status === 'pending') {
+    const cutoffTime = order.slot ? new Date(order.slot.cutoffTime) : null;
+    if (cutoffTime && cutoffTime <= new Date()) return 'closed';
+  }
+
   return 'active';
+}
+
+function isOrderTimedOut(order) {
+  if (order.status !== 'pending') return false;
+  const cutoffTime = order.slot ? new Date(order.slot.cutoffTime) : null;
+  return !!(cutoffTime && cutoffTime <= new Date());
 }
 
 
@@ -5534,6 +5573,84 @@ document.getElementById('confirm-defense-btn').addEventListener('click',async()=
   if(!responderName)return showToast('Enter your name first.');
   try{const r=await fetch(`${API_BASE}/api/ratings/${currentDefenseRatingId}/defend`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({response:responseText,responderName})});const d=await r.json();if(!r.ok)return showToast(d.error||'Could not submit response');document.getElementById('defense-modal').classList.remove('show');showToast('Your response has been submitted.');if(nameField?.value.trim())loadMyOrders();if(sellerField?.value.trim())loadSellerQueue(sellerField.value.trim());}catch(err){showToast('Network error — please try again');}
 });
+
+/* =========================================================
+   REPUTATION BADGES (visible to browsing buyers/sellers)
+========================================================= */
+
+const reputationCache = {};
+
+async function fetchReputation(role, name) {
+  const cacheKey = role + ':' + name;
+  if (reputationCache[cacheKey]) return reputationCache[cacheKey];
+
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/reputation/${role}/${encodeURIComponent(name)}`
+    );
+    const data = await response.json();
+    reputationCache[cacheKey] = data;
+    return data;
+  } catch (err) {
+    return null;
+  }
+}
+
+async function renderReputationBadge(role, name, elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  const rep = await fetchReputation(role, name);
+  if (!rep || !rep.totalRatings) {
+    el.innerHTML = `<span class="distance-tag" style="opacity:0.7;">New — no ratings yet</span>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <span
+      class="distance-tag"
+      style="cursor:pointer;text-decoration:underline;"
+      onclick="openReputationModal('${role}','${encodeURIComponent(name)}')"
+    >
+      ${escapeHtml(rep.title)} · ⭐ ${rep.overallRating} (${rep.totalRatings})
+    </span>
+  `;
+}
+
+async function openReputationModal(role, nameEnc) {
+  const name = decodeURIComponent(nameEnc);
+  const rep = await fetchReputation(role, name);
+
+  document.getElementById('reputation-modal-title').textContent = name;
+
+  if (!rep || !rep.totalRatings) {
+    document.getElementById('reputation-modal-subtitle').textContent = 'No ratings yet.';
+    document.getElementById('reputation-modal-body').innerHTML = '';
+  } else {
+    document.getElementById('reputation-modal-subtitle').textContent =
+      `${rep.title} · ⭐ ${rep.overallRating} / 5 · ${rep.totalRatings} ratings`;
+
+    const categoryRows = Object.entries(rep.categoryAverages || {}).map(([key, val]) => `
+      <div class="order-detail-row">
+        <span>${escapeHtml(key)}</span>
+        <span>⭐ ${val}</span>
+      </div>
+    `).join('');
+
+    const countLine = role === 'seller'
+      ? `<p style="font-size:13px;color:var(--ink-soft);margin:8px 0;">${rep.mealsCompleted} meals completed</p>`
+      : `<p style="font-size:13px;color:var(--ink-soft);margin:8px 0;">${rep.ordersCompleted} orders completed · ${rep.cancellationRate}% cancellation rate</p>`;
+
+    document.getElementById('reputation-modal-body').innerHTML = countLine + categoryRows;
+  }
+
+  document.getElementById('reputation-modal').classList.add('show');
+}
+
+document.getElementById('close-reputation-btn').addEventListener('click', () => {
+  document.getElementById('reputation-modal').classList.remove('show');
+});
+
 
 /* =========================================================
    INITIAL LOAD

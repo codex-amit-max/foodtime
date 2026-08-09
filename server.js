@@ -93,6 +93,9 @@ const ratingSchema = new mongoose.Schema({
   },
   overall: { type: Number, required: true },
   comment: String,
+  revealed: { type: Boolean, default: false },
+  defenseResponse: String,
+  defenseAt: Date,
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -1543,9 +1546,9 @@ app.patch('/api/notifications/:role/:name/read-all', async (req, res) => {
 
 app.post('/api/ratings', async (req, res) => {
   try {
-    const { orderId, raterRole, raterName, ratedName, scores, comment } = req.body;
+    const { orderId, raterRole, raterName, scores, comment } = req.body;
 
-    if (!orderId || !raterRole || !raterName || !ratedName || !scores) {
+    if (!orderId || !raterRole || !raterName || !scores) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -1573,6 +1576,8 @@ app.post('/api/ratings', async (req, res) => {
     }
     const overall = values.reduce((a, b) => a + b, 0) / values.length;
 
+    const ratedName = raterRole === 'buyer' ? slot.sellerName : order.buyerName;
+
     const rating = new Rating({
       orderId, raterRole, raterName, ratedName,
       scores, overall,
@@ -1580,7 +1585,54 @@ app.post('/api/ratings', async (req, res) => {
     });
     await rating.save();
 
-    res.status(201).json(rating);
+    const otherRole = raterRole === 'buyer' ? 'seller' : 'buyer';
+    const otherRating = await Rating.findOne({ orderId, raterRole: otherRole });
+
+    let revealed = false;
+    if (otherRating) {
+      revealed = true;
+      rating.revealed = true;
+      otherRating.revealed = true;
+      await rating.save();
+      await otherRating.save();
+    }
+
+    res.status(201).json({ ...rating.toObject(), revealed });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/ratings/:id/defend', async (req, res) => {
+  try {
+    const { response, responderName } = req.body;
+
+    if (!response || !response.trim()) {
+      return res.status(400).json({ error: 'Please explain what happened' });
+    }
+    if (!responderName) {
+      return res.status(400).json({ error: 'Your name is required' });
+    }
+
+    const rating = await Rating.findById(req.params.id);
+    if (!rating) {
+      return res.status(404).json({ error: 'Rating not found' });
+    }
+    if (rating.ratedName !== responderName) {
+      return res.status(403).json({ error: 'Only the rated party can respond to this rating' });
+    }
+    if (rating.defenseResponse) {
+      return res.status(400).json({ error: 'A response has already been submitted for this rating' });
+    }
+    if (Number(rating.overall) >= 3) {
+      return res.status(400).json({ error: 'You can only respond to a negative rating' });
+    }
+
+    rating.defenseResponse = response.trim();
+    rating.defenseAt = new Date();
+    await rating.save();
+
+    res.json(rating);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
