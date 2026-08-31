@@ -1016,11 +1016,14 @@ label {
 
     <textarea
       id="s-items"
-      placeholder="e.g. Rajma Chawal, salad, extra roti"
+      placeholder="e.g. Rajma Chawal, salad, extra roti — please specify quantity clearly (e.g. '3 rotis + sabzi')"
     ></textarea>
+    <p style="font-size:11.5px;color:var(--ink-soft);margin:-8px 0 12px;">
+      Please state the exact quantity per portion — undersized portions can lead to complaints and removal from the platform.
+    </p>
 
 
-    <label>Price per Portion</label>
+    <label>Price per Portion (must be under ₹150)</label>
 
     <div class="price-input-wrap">
 
@@ -1028,6 +1031,7 @@ label {
         type="number"
         id="s-price"
         min="1"
+        max="149"
         placeholder="e.g. 80"
       >
 
@@ -1194,8 +1198,37 @@ label {
     <strong>Menu Editing:</strong>
     Before an order is accepted, the seller can modify
     the menu details. Once an order has been accepted,
-    the seller can only increase the available quantity
-    and extend the meal availability time.
+    the seller can only increase the available quantity —
+    the meal time can no longer be changed.
+  </p>
+
+  <p>
+    <strong>Pricing:</strong>
+    FoodTime is for affordable, everyday home-cooked meals —
+    every menu must be priced under ₹150 per portion.
+  </p>
+
+  <p>
+    <strong>Portion Size:</strong>
+    Sellers must clearly state the exact quantity per portion
+    (e.g. "3 rotis + sabzi"). Repeated complaints about undersized
+    portions may lead to removal from the platform.
+  </p>
+
+  <p>
+    <strong>Food Safety:</strong>
+    Selling stale or unsafe food is strictly prohibited. Any harm
+    or illness resulting from stale or unsafe food is the seller's
+    sole responsibility — FoodTime is only a listing platform and
+    does not prepare, inspect, or handle any food.
+  </p>
+
+  <p>
+    <strong>Delivery Confirmation:</strong>
+    Once a seller accepts an order, the buyer receives a delivery
+    code. The seller must enter this code in the app to confirm
+    the meal was delivered — this is required before either party
+    can rate the order.
   </p>
 
   <p>
@@ -1211,10 +1244,15 @@ label {
     <strong>Pickup &amp; Delivery:</strong>
     FoodTime connects home cooks with nearby buyers only.
     It is not a delivery service — pickup or delivery must be
-    arranged directly between buyer and seller.
+    arranged directly between buyer and seller, including via
+    third-party services like Swiggy Genie or Porter.
   </p>
 
 </div>
+
+
+
+<div id="app-stats-panel" style="text-align:center;margin:0 16px 20px;font-size:11.5px;color:var(--ink-soft);"></div>
 
 
 
@@ -1393,7 +1431,7 @@ label {
     ></textarea>
 
 
-    <label>Price per Portion</label>
+    <label>Price per Portion (must be under ₹150)</label>
 
     <div class="price-input-wrap">
 
@@ -1401,6 +1439,7 @@ label {
         type="number"
         id="edit-price"
         min="1"
+        max="149"
       >
 
     </div>
@@ -2122,6 +2161,13 @@ function renderBuyerCard(slot) {
         >
 
 
+        <input
+          type="text"
+          placeholder="Delivery address (optional, if you want it delivered)"
+          id="buyer-address-${slot._id}"
+        >
+
+
         <div
           class="order-total"
           id="order-total-${slot._id}"
@@ -2513,6 +2559,13 @@ async function placeOrder(
       .trim();
 
 
+  const buyerAddressField =
+    document.getElementById(`buyer-address-${slotId}`);
+
+  const buyerAddress =
+    buyerAddressField ? buyerAddressField.value.trim() : '';
+
+
   if (!buyerName) {
 
     showToast(
@@ -2564,6 +2617,7 @@ async function placeOrder(
             buyerName,
             buyerPhone,
             buyerEmail,
+            buyerAddress,
             quantity
           })
 
@@ -2883,6 +2937,14 @@ async function loadMyOrders() {
 
       }
 
+      if (order.status === 'delivered') {
+
+        statusLabel = 'Delivered';
+
+        badgeClass = 'badge-open';
+
+      }
+
 
       const canCancel =
         slot.canCancel &&
@@ -3026,6 +3088,38 @@ async function loadMyOrders() {
 
           ? `
             <div id="rate-slot-${order._id}"></div>
+          `
+          : ''
+        }
+
+
+        ${
+          order.status === 'accepted' && order.deliveryOtp
+
+          ? `
+
+            <div class="seller-action-box">
+              <div class="seller-action-title">Your Delivery Code</div>
+              <p style="font-size:22px;font-weight:700;letter-spacing:3px;color:var(--sindoor);margin:4px 0;">
+                ${escapeHtml(order.deliveryOtp)}
+              </p>
+              <p style="font-size:12px;color:var(--ink-soft);margin:0;">
+                Share this code with ${escapeHtml(slot.sellerName)} when you collect your meal. They'll enter it to confirm delivery — don't share it with anyone else.
+              </p>
+            </div>
+
+            <div class="seller-action-box">
+              <div class="seller-action-title">🚚 Need It Delivered?</div>
+              <p style="font-size:12px;color:var(--ink-soft);margin:0 0 8px;">
+                FoodTime doesn't handle delivery — book a rider yourself and pay them directly.
+                ${slot.location ? `Pickup: <strong>${escapeHtml(slot.location)}</strong>` : ''}
+              </p>
+              <div class="btn-row">
+                <a href="https://www.swiggy.com/genie" target="_blank" class="btn btn-secondary" style="text-align:center;text-decoration:none;">Swiggy Genie</a>
+                <a href="https://porter.in/" target="_blank" class="btn btn-secondary" style="text-align:center;text-decoration:none;">Porter</a>
+              </div>
+            </div>
+
           `
           : ''
         }
@@ -3743,6 +3837,14 @@ function renderQueueCard(
 
   }
 
+  if (order.status === 'delivered') {
+
+    statusLabel = 'Delivered';
+
+    badgeClass = 'badge-open';
+
+  }
+
 
   const isPending =
     order.status === 'pending' && !timedOut;
@@ -3898,6 +4000,7 @@ function renderQueueCard(
     }
 
 
+
     ${
       isActive
 
@@ -3960,6 +4063,48 @@ function renderQueueCard(
           >
             Cancel Order
           </button>
+
+        </div>
+
+      `
+      : ''
+    }
+
+
+    ${
+      isAccepted
+
+      ? `
+
+        <div class="seller-action-box">
+
+          <div class="seller-action-title">
+            Confirm Delivery
+          </div>
+
+          <div class="edit-note">
+            Ask the buyer for their delivery code and enter it below.
+            This unlocks rating for both of you.
+          </div>
+
+          <div class="order-row">
+
+            <input
+              type="text"
+              placeholder="4-digit code"
+              maxlength="4"
+              id="delivery-otp-${order._id}"
+            >
+
+            <button
+              class="btn btn-success"
+              style="width:auto;margin-top:0;padding:0 16px;"
+              onclick="confirmDelivery('${order._id}','${encodeURIComponent(sellerName)}')"
+            >
+              Confirm
+            </button>
+
+          </div>
 
         </div>
 
@@ -4046,6 +4191,10 @@ async function acceptOrder(
 
 }
 
+
+/* =========================================================
+   CONFIRM DELIVERY
+========================================================= */
 
 /* =========================================================
    REJECT MODAL
@@ -4419,6 +4568,50 @@ async function editOrderQty(
       'Network error — please try again'
     );
 
+  }
+
+}
+
+
+async function confirmDelivery(orderId, sellerNameEncoded) {
+
+  const input = document.getElementById(`delivery-otp-${orderId}`);
+  if (!input) return;
+
+  const otp = input.value.trim();
+
+  if (!otp) {
+    showToast('Enter the delivery code');
+    return;
+  }
+
+  const sellerName = decodeURIComponent(sellerNameEncoded);
+
+  try {
+
+    const response = await fetch(
+      `${API_BASE}/api/orders/${orderId}/confirm-delivery`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otp })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      showToast(data.error || 'Could not confirm delivery');
+      return;
+    }
+
+    showToast('Delivery confirmed! Rating is now open for both of you.');
+
+    loadSellerQueue(sellerName);
+    loadSellerSlots(sellerName);
+
+  } catch (error) {
+    showToast('Network error — please try again');
   }
 
 }
@@ -4804,10 +4997,13 @@ async function openMenuEditModal(
   if (hasAcceptedOrders) {
 
     note.textContent =
-      'An accepted order exists. You may only increase portions and extend the meal time.';
+      'An accepted order exists. You may only increase available portions — meal time can no longer be changed.';
 
 
     mealType.disabled =
+      true;
+
+    mealTime.disabled =
       true;
 
     items.disabled =
@@ -4822,11 +5018,6 @@ async function openMenuEditModal(
 
     portions.min =
       slot.maxPortions;
-
-    mealTime.min =
-      toDateTimeLocalValue(
-        slot.mealTime
-      );
 
 
   } else {
@@ -5037,7 +5228,7 @@ async function saveMenuEdit() {
       .trim();
 
 
-  if (!mealTime) {
+  if (!mealTime && !hasAcceptedOrders) {
 
     showToast(
       'Meal time is required.'
@@ -5099,20 +5290,6 @@ async function saveMenuEdit() {
   }
 
 
-  if (
-    hasAcceptedOrders &&
-    new Date(mealTime) < new Date(slot.mealTime)
-  ) {
-
-    showToast(
-      'After acceptance, meal time can only be extended.'
-    );
-
-    return;
-
-  }
-
-
   const updateData = {};
 
 
@@ -5140,9 +5317,6 @@ async function saveMenuEdit() {
 
     updateData.maxPortions =
       maxPortions;
-
-    updateData.mealTime =
-      mealTime;
 
   }
 
@@ -5264,9 +5438,8 @@ function classifyOrder(order) {
     return 'closed';
   }
 
-  if (order.status === 'accepted') {
-    const mealTime = order.slot ? new Date(order.slot.mealTime) : null;
-    if (mealTime && mealTime <= new Date()) return 'completed';
+  if (order.status === 'delivered') {
+    return 'completed';
   }
 
   if (order.status === 'pending') {
@@ -5654,6 +5827,31 @@ async function openReputationModal(role, nameEnc) {
 document.getElementById('close-reputation-btn').addEventListener('click', () => {
   document.getElementById('reputation-modal').classList.remove('show');
 });
+
+
+/* =========================================================
+   ANALYTICS
+========================================================= */
+
+(function trackVisit() {
+  try {
+    fetch(`${API_BASE}/api/analytics/visit`, { method: 'POST' }).catch(() => {});
+  } catch (err) {}
+})();
+
+async function loadAppStats() {
+  const panel = document.getElementById('app-stats-panel');
+  if (!panel) return;
+  try {
+    const response = await fetch(`${API_BASE}/api/analytics/stats`);
+    const stats = await response.json();
+    panel.textContent =
+      `${stats.totalVisits} visits · ${stats.totalBuyers} buyers · ${stats.totalSellers} sellers on FoodTime`;
+  } catch (err) {
+    panel.textContent = '';
+  }
+}
+loadAppStats();
 
 
 /* =========================================================
