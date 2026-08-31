@@ -3,8 +3,36 @@
   "short_name": "FoodTime",
   "description": "Home-cooked meals, on the family's clock.",
   "start_url": "./index.html",
+  "id": "/index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#FAF6ED",
   "theme_color": "#A63D2F",
-  "icons": []
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }
