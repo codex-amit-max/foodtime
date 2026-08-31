@@ -48,6 +48,7 @@ const orderSchema = new mongoose.Schema({
   buyerName: { type: String, required: true },
   buyerPhone: String,
   buyerEmail: String,
+  buyerAddress: String,
 
   quantity: {
     type: Number,
@@ -61,6 +62,7 @@ const orderSchema = new mongoose.Schema({
       'pending',
       'accepted',
       'rejected',
+      'delivered',
       'cancelled_by_buyer',
       'cancelled_by_seller'
     ],
@@ -68,6 +70,9 @@ const orderSchema = new mongoose.Schema({
   },
 
   cancelReason: String,
+
+  deliveryOtp: String,
+  deliveredAt: Date,
 
   createdAt: { type: Date, default: Date.now }
 });
@@ -103,6 +108,11 @@ const Slot = mongoose.model('Slot', slotSchema);
 const Order = mongoose.model('Order', orderSchema);
 const Notification = mongoose.model('Notification', notificationSchema);
 const Rating = mongoose.model('Rating', ratingSchema);
+
+const visitSchema = new mongoose.Schema({
+  createdAt: { type: Date, default: Date.now }
+});
+const Visit = mongoose.model('Visit', visitSchema);
 
 
 /* =========================================================
@@ -249,6 +259,12 @@ app.post('/api/slots', async (req, res) => {
     if (Number(pricePerPortion) <= 0) {
       return res.status(400).json({
         error: 'Price must be greater than zero'
+      });
+    }
+
+    if (Number(pricePerPortion) >= 150) {
+      return res.status(400).json({
+        error: 'FoodTime meals must be priced under ₹150 per portion — this platform is for affordable, everyday home-cooked meals.'
       });
     }
 
@@ -497,7 +513,6 @@ app.patch('/api/slots/:id', async (req, res) => {
     if (acceptedOrderExists) {
 
       const allowedFields = [
-        'mealTime',
         'maxPortions'
       ];
 
@@ -513,7 +528,7 @@ app.patch('/api/slots/:id', async (req, res) => {
       if (invalidField) {
         return res.status(400).json({
           error:
-            'This meal already has an accepted order. You can only increase available portions or extend the meal time.'
+            'This meal already has an accepted order. You can only increase available portions — meal time can no longer be changed.'
         });
       }
 
@@ -538,30 +553,6 @@ app.patch('/api/slots/:id', async (req, res) => {
         }
 
         slot.maxPortions = newMax;
-      }
-
-
-      /* Extend meal time only */
-
-      if (mealTime !== undefined) {
-
-        const newMealTime = new Date(mealTime);
-
-        if (isNaN(newMealTime.getTime())) {
-          return res.status(400).json({
-            error: 'Invalid meal time'
-          });
-        }
-
-        if (newMealTime <= slot.mealTime) {
-          return res.status(400).json({
-            error:
-              'After an order is accepted, meal time can only be extended.'
-          });
-        }
-
-        slot.mealTime = newMealTime;
-        slot.cutoffTime = calculateCutoff(newMealTime);
       }
 
 
@@ -621,6 +612,12 @@ app.patch('/api/slots/:id', async (req, res) => {
       if (price <= 0) {
         return res.status(400).json({
           error: 'Price must be greater than zero'
+        });
+      }
+
+      if (price >= 150) {
+        return res.status(400).json({
+          error: 'FoodTime meals must be priced under ₹150 per portion.'
         });
       }
 
@@ -740,6 +737,7 @@ app.post('/api/orders', async (req, res) => {
       buyerName,
       buyerPhone,
       buyerEmail,
+      buyerAddress,
       quantity
     } = req.body;
 
@@ -789,6 +787,9 @@ app.post('/api/orders', async (req, res) => {
         : null,
       buyerEmail: buyerEmail
         ? buyerEmail.trim()
+        : null,
+      buyerAddress: buyerAddress
+        ? buyerAddress.trim()
         : null,
       quantity: qty,
       status: 'pending'
@@ -847,11 +848,18 @@ app.get('/api/orders/buyer/:buyerName', async (req, res) => {
 
           buyerEmail: order.buyerEmail,
 
+          buyerAddress: order.buyerAddress,
+
           quantity: order.quantity,
 
           status: order.status,
 
           cancelReason: order.cancelReason,
+
+          deliveryOtp:
+            order.status === 'accepted'
+              ? order.deliveryOtp
+              : null,
 
           createdAt: order.createdAt,
 
@@ -868,6 +876,7 @@ app.get('/api/orders/buyer/:buyerName', async (req, res) => {
                 upiId: slot.upiId,
                 sellerPhone:
                   slot.sellerPhone,
+                location: slot.location,
 
                 canCancel:
                   new Date(slot.cutoffTime) >
@@ -1011,12 +1020,15 @@ app.patch('/api/orders/:id/accept', async (req, res) => {
 
     order.status = 'accepted';
 
+    const otp = String(Math.floor(1000 + Math.random() * 9000));
+    order.deliveryOtp = otp;
+
     await order.save();
 
     await notify(
       'buyer',
       order.buyerName,
-      `Your order for "${slot.items}" was accepted!`,
+      `Your order for "${slot.items}" was accepted! Your delivery code is ${otp} — share it with ${slot.sellerName} when you collect your meal, and don't share it with anyone else.`,
       order._id,
       slot._id
     );
@@ -1107,6 +1119,78 @@ app.patch('/api/orders/:id/reject', async (req, res) => {
     res.json({
       success: true,
       message: 'Order rejected.',
+      order
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
+});
+
+
+/* =========================================================
+   CONFIRM DELIVERY (OTP)
+   =========================================================
+
+   Seller enters the code the buyer shares with them in
+   person. Correct code marks the order delivered, which
+   is what unlocks rating for both sides.
+   ========================================================= */
+
+app.patch('/api/orders/:id/confirm-delivery', async (req, res) => {
+  try {
+
+    const { otp } = req.body;
+
+    if (!otp || !String(otp).trim()) {
+      return res.status(400).json({
+        error: 'Please enter the delivery code'
+      });
+    }
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({
+        error: 'Order not found'
+      });
+    }
+
+    if (order.status !== 'accepted') {
+      return res.status(400).json({
+        error: `Cannot confirm delivery — this order is ${order.status}.`
+      });
+    }
+
+    if (String(otp).trim() !== order.deliveryOtp) {
+      return res.status(400).json({
+        error: 'Incorrect code. Please check with the buyer and try again.'
+      });
+    }
+
+    order.status = 'delivered';
+    order.deliveredAt = new Date();
+
+    await order.save();
+
+    const slot = await Slot.findById(order.slotId);
+
+    await notify(
+      'buyer',
+      order.buyerName,
+      `Your order has been marked as delivered. You can now rate this meal!`,
+      order._id,
+      order.slotId
+    );
+
+    res.json({
+      success: true,
+      message: 'Delivery confirmed.',
       order
     });
 
@@ -1556,13 +1640,13 @@ app.post('/api/ratings', async (req, res) => {
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
-    if (order.status !== 'accepted') {
-      return res.status(400).json({ error: 'You can only rate completed orders' });
+    if (order.status !== 'delivered') {
+      return res.status(400).json({ error: 'You can only rate delivered orders' });
     }
 
     const slot = await Slot.findById(order.slotId);
-    if (!slot || new Date(slot.mealTime) > new Date()) {
-      return res.status(400).json({ error: 'This meal has not happened yet' });
+    if (!slot) {
+      return res.status(404).json({ error: 'Menu not found' });
     }
 
     const existing = await Rating.findOne({ orderId, raterRole, raterName });
@@ -1726,6 +1810,37 @@ app.get('/api/reputation/buyer/:buyerName', async (req, res) => {
       ordersCompleted: completedCount,
       cancellationRate: Math.round(cancellationRate * 1000) / 10,
       categoryAverages
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+/* =========================================================
+   ANALYTICS
+   ========================================================= */
+
+app.post('/api/analytics/visit', async (req, res) => {
+  try {
+    await Visit.create({});
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/analytics/stats', async (req, res) => {
+  try {
+    const totalVisits = await Visit.countDocuments();
+
+    const buyerNames = await Order.distinct('buyerName');
+    const sellerNames = await Slot.distinct('sellerName');
+
+    res.json({
+      totalVisits,
+      totalBuyers: buyerNames.length,
+      totalSellers: sellerNames.length
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
